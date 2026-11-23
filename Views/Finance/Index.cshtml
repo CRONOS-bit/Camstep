@@ -1,0 +1,214 @@
+@model FinanceViewModel
+@{
+    ViewData["Title"] = "Finanzas";
+    var currentUrl = Context.Request.Path + Context.Request.QueryString;
+    string D(DateTime d) => d.ToString("yyyy-MM-dd");
+    var periods = new[] { ("day", "Día"), ("week", "Semana"), ("month", "Mes"), ("year", "Año") };
+    var allCategories = Model.ExpenseCategories.Concat(Model.IncomeCategories).Distinct().ToList();
+
+    var expenseChange = FinanceViewModel.ChangePercent(Model.TotalExpense, Model.PrevExpense);
+    var incomeChange = FinanceViewModel.ChangePercent(Model.TotalIncome, Model.PrevIncome);
+
+    var max = Math.Max(1m, Model.YearBars.Max(b => Math.Max(b.Income, b.Expense)));
+    const int chartW = 640, chartH = 220, top = 14, bottom = 28, left = 8;
+    var plotH = chartH - top - bottom;
+    var slot = (chartW - left * 2) / 12.0;
+    var barW = Math.Min(16, slot / 2 - 4);
+    double Hd(decimal v) => (double)(v / max) * plotH;
+    string Num(double v) => v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+}
+
+<div class="page-head">
+    <div>
+        <h1>Finanzas</h1>
+        <p>Ingresos, gastos, presupuesto y balance.</p>
+    </div>
+    <div class="header-actions">
+        <a class="btn primary" asp-controller="Expenses" asp-action="Create" asp-route-returnUrl="@currentUrl">+ Gasto</a>
+        <a class="btn" asp-controller="Incomes" asp-action="Create" asp-route-returnUrl="@currentUrl">+ Ingreso</a>
+        <a class="btn" asp-action="Budgets">Presupuestos y categorías</a>
+    </div>
+</div>
+
+<section class="card period-bar">
+    <div class="calendar-filter" role="group" aria-label="Periodo">
+        @foreach (var (id, name) in periods)
+        {
+            <a class="chip @(Model.Period == id ? "active" : "")" aria-current="@(Model.Period == id ? "true" : null)"
+               asp-action="Index" asp-route-period="@id" asp-route-date="@D(Model.Anchor)">@name</a>
+        }
+    </div>
+    <div class="period-nav">
+        <a class="calendar-nav-button" aria-label="Periodo anterior" asp-action="Index" asp-route-period="@Model.Period" asp-route-date="@D(Model.PrevAnchor)">‹</a>
+        <h2>@Model.PeriodLabel</h2>
+        <a class="calendar-nav-button" aria-label="Periodo siguiente" asp-action="Index" asp-route-period="@Model.Period" asp-route-date="@D(Model.NextAnchor)">›</a>
+        <a class="calendar-today-button" asp-action="Index" asp-route-period="@Model.Period">Hoy</a>
+    </div>
+</section>
+
+@foreach (var alert in Model.Alerts)
+{
+    <p class="budget-alert" role="alert">⚠ @alert</p>
+}
+
+<div class="stats">
+    <div class="stat">
+        <small>Ingresos</small>
+        <b class="money-in">@Format.Money(Model.TotalIncome)</b>
+        <span class="change">@(incomeChange == null ? "Sin datos del periodo anterior" : $"{(incomeChange >= 0 ? "▲" : "▼")} {Math.Abs(incomeChange.Value)}% vs. anterior")</span>
+    </div>
+    <div class="stat">
+        <small>Gastos</small>
+        <b class="money-out">@Format.Money(Model.TotalExpense)</b>
+        <span class="change">@(expenseChange == null ? "Sin datos del periodo anterior" : $"{(expenseChange >= 0 ? "▲" : "▼")} {Math.Abs(expenseChange.Value)}% vs. anterior")</span>
+    </div>
+    <div class="stat">
+        <small>Balance</small>
+        <b class="@(Model.Balance >= 0 ? "money-in" : "money-out")">@(Model.Balance < 0 ? "-" : "")@Format.Money(Math.Abs(Model.Balance))</b>
+        <span class="change">Ingresos menos gastos</span>
+    </div>
+    <div class="stat">
+        <small>Disponible del presupuesto (@Format.MonthYear(new DateTime(Model.Anchor.Year, Model.Anchor.Month, 1)))</small>
+        @if (Model.MonthlyBudget is > 0)
+        {
+            <b class="@(Model.Available >= 0 ? "" : "money-out")">@(Model.Available < 0 ? "-" : "")@Format.Money(Math.Abs(Model.Available))</b>
+            <div class="progress budget-@(Model.BudgetPercent > 100 ? "over" : Model.BudgetPercent >= 80 ? "warn" : "ok")" role="progressbar"
+                 aria-valuenow="@Model.BudgetPercent" aria-valuemin="0" aria-valuemax="100" aria-label="Presupuesto usado">
+                <span style="width:@Math.Min(100, Model.BudgetPercent)%"></span>
+            </div>
+            <span class="change">Usado: @Model.BudgetPercent% de @Format.Money(Model.MonthlyBudget.Value)</span>
+        }
+        else
+        {
+            <b>—</b>
+            <a class="btn soft small" asp-action="Budgets">＋ Definir presupuesto</a>
+        }
+    </div>
+</div>
+
+<div class="grid-2">
+    <section class="card">
+        <div class="section-head"><h2>Gastos por categoría</h2><span class="muted">@Model.PeriodLabel</span></div>
+        @if (!Model.ByCategory.Any())
+        {
+            <p class="muted">No hay gastos en este periodo.</p>
+        }
+        @{ var maxCat = Math.Max(1m, Model.ByCategory.Max(c => (decimal?)Math.Max(c.Spent, c.Budget ?? 0)) ?? 1m); }
+        @foreach (var c in Model.ByCategory)
+        {
+            var pct = (int)Math.Round(c.Spent / maxCat * 100);
+            <div class="cat-row">
+                <div class="cat-head">
+                    <a asp-action="Index" asp-route-period="@Model.Period" asp-route-date="@D(Model.Anchor)" asp-route-type="expense" asp-route-category="@c.Category" class="chip-link" title="Ver los gastos de @c.Category">@c.Category</a>
+                    <span>@Format.Money(c.Spent)@(c.Budget is > 0 ? $" de {Format.Money(c.Budget.Value)}" : "")</span>
+                </div>
+                <div class="progress budget-@c.Level"><span style="width:@pct%"></span></div>
+                @if (c.Budget is > 0)
+                {
+                    <small class="muted">@c.Percent% del presupuesto@(c.Level == "over" ? " · superado" : "")</small>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="card">
+        <div class="section-head"><h2>Ingresos y gastos @Model.Year</h2>
+            <span class="chart-legend"><span class="dot in"></span>Ingresos <span class="dot out"></span>Gastos</span>
+        </div>
+        <svg class="year-chart" viewBox="0 0 @chartW @chartH" role="img" aria-label="Ingresos y gastos por mes en @Model.Year">
+            <line x1="0" x2="@chartW" y1="@(chartH - bottom)" y2="@(chartH - bottom)" class="axis" />
+            @for (int i = 0; i < Model.YearBars.Count; i++)
+            {
+                var bar = Model.YearBars[i];
+                var cx = left + slot * i + slot / 2;
+                <g>
+                    <title>@bar.Label: ingresos @Format.Money(bar.Income), gastos @Format.Money(bar.Expense)</title>
+                    <rect class="bar-in" x="@Num(cx - barW - 1)" width="@Num(barW)" y="@Num(chartH - bottom - Hd(bar.Income))" height="@Num(Hd(bar.Income))" rx="3" />
+                    <rect class="bar-out" x="@Num(cx + 1)" width="@Num(barW)" y="@Num(chartH - bottom - Hd(bar.Expense))" height="@Num(Hd(bar.Expense))" rx="3" />
+                    <text x="@Num(cx)" y="@(chartH - 8)" text-anchor="middle">@bar.Label</text>
+                </g>
+            }
+        </svg>
+        <p class="muted small-text">
+            Total @Model.Year: ingresos @Format.Money(Model.YearBars.Sum(b => b.Income)) · gastos @Format.Money(Model.YearBars.Sum(b => b.Expense))
+        </p>
+    </section>
+</div>
+
+<section class="card">
+    <div class="section-head">
+        <h2>Movimientos</h2>
+        <a class="btn small" asp-action="Export" asp-route-period="@Model.Period" asp-route-date="@D(Model.Anchor)"
+           asp-route-type="@(Model.Type == "all" ? null : Model.Type)" asp-route-category="@(Model.Category == "" ? null : Model.Category)"
+           asp-route-q="@(Model.Q == "" ? null : Model.Q)">⬇ Exportar a Excel (CSV)</a>
+    </div>
+
+    <form class="filters" method="get" asp-action="Index" role="search" aria-label="Filtrar movimientos">
+        <input type="hidden" name="period" value="@Model.Period" />
+        <input type="hidden" name="date" value="@D(Model.Anchor)" />
+        <div class="filter-field grow-2">
+            <label for="q">Buscar</label>
+            <input id="q" name="q" type="search" value="@Model.Q" placeholder="Descripción o categoría" />
+        </div>
+        <div class="filter-field">
+            <label for="type">Tipo</label>
+            <select id="type" name="type">
+                <option value="all" selected="@(Model.Type == "all")">Todos</option>
+                <option value="expense" selected="@(Model.Type == "expense")">Gastos</option>
+                <option value="income" selected="@(Model.Type == "income")">Ingresos</option>
+            </select>
+        </div>
+        <div class="filter-field">
+            <label for="category">Categoría</label>
+            <select id="category" name="category">
+                <option value="" selected="@(Model.Category == "")">Todas</option>
+                @foreach (var c in allCategories)
+                {
+                    <option value="@c" selected="@(Model.Category == c)">@c</option>
+                }
+            </select>
+        </div>
+        <div class="filter-actions">
+            <button class="btn primary" type="submit">Aplicar</button>
+            @if (Model.Type != "all" || Model.Category != "" || Model.Q != "")
+            {
+                <a class="btn" asp-action="Index" asp-route-period="@Model.Period" asp-route-date="@D(Model.Anchor)">Limpiar</a>
+            }
+        </div>
+    </form>
+
+    @foreach (var m in Model.Movements)
+    {
+        var controller = m.IsIncome ? "Incomes" : "Expenses";
+        <div class="list-item movement @(m.IsIncome ? "in" : "out")">
+            <div>
+                <strong>@m.Description</strong>
+                <small>@(m.IsIncome ? "Ingreso" : "Gasto") · @m.Category · @Format.Date(m.Date)</small>
+            </div>
+            <div class="item-actions">
+                <strong class="@(m.IsIncome ? "money-in" : "money-out")">@(m.IsIncome ? "+" : "-")@Format.Money(m.Amount)</strong>
+                <a class="btn soft small" asp-controller="@controller" asp-action="Edit" asp-route-id="@m.Id" asp-route-returnUrl="@currentUrl">✎ Editar</a>
+                <form class="inline" asp-controller="@controller" asp-action="Delete" asp-route-id="@m.Id" method="post"
+                      data-confirm="¿Eliminar «@m.Description»?">
+                    <input type="hidden" name="returnUrl" value="@currentUrl" />
+                    <button class="danger-link" type="submit">Eliminar</button>
+                </form>
+            </div>
+        </div>
+    }
+
+    @if (!Model.Movements.Any())
+    {
+        <div class="empty-state">
+            <p>No hay movimientos @(Model.Type != "all" || Model.Category != "" || Model.Q != "" ? "que coincidan con los filtros" : "en este periodo").</p>
+            <a class="btn primary" asp-controller="Expenses" asp-action="Create" asp-route-returnUrl="@currentUrl">Registrar un gasto</a>
+        </div>
+    }
+    else if (Model.Type != "all" || Model.Category != "" || Model.Q != "")
+    {
+        <p class="muted small-text">
+            Mostrando @Model.Movements.Count movimiento(s): ingresos @Format.Money(Model.Movements.Where(x => x.IsIncome).Sum(x => x.Amount)),
+            gastos @Format.Money(Model.Movements.Where(x => !x.IsIncome).Sum(x => x.Amount)).
+        </p>
+    }
+</section>

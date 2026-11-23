@@ -1,0 +1,362 @@
+﻿@model CalendarViewModel
+
+@{
+    ViewData["Title"] = "Calendario";
+
+    var weekdays = new[] { "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo" };
+    var weekdaysShort = new[] { "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom" };
+
+    var selectedUrl = Url.Action("Index", "Calendar", new
+    {
+        year = Model.SelectedDate.Year,
+        month = Model.SelectedDate.Month,
+        day = Model.SelectedDate.Day,
+        show = Model.Show == "all" ? null : Model.Show,
+        view = Model.View == "month" ? null : Model.View
+    });
+    var showRoute = Model.Show == "all" ? null : Model.Show;
+    var viewRoute = Model.View == "month" ? null : Model.View;
+    var title = Model.View switch
+    {
+        "week" => $"Semana del {Model.WeekStart.ToString("d 'de' MMM", Format.Es).Replace(".", "")} al {Model.WeekStart.AddDays(6).ToString("d 'de' MMM yyyy", Format.Es).Replace(".", "")}",
+        "day" => Format.LongDate(Model.SelectedDate),
+        _ => Format.MonthYear(Model.CurrentMonth)
+    };
+    var unit = Model.View switch { "week" => "Semana", "day" => "Día", _ => "Mes" };
+}
+
+<div class="calendar-page">
+
+    <div class="calendar-header">
+        <div>
+            <h1>Mi calendario</h1>
+            <p>Organiza tus días: tareas y eventos en un solo lugar.</p>
+        </div>
+
+        <div class="header-actions">
+            <a asp-controller="Tasks" asp-action="Create"
+               asp-route-dueDate="@Model.SelectedUrlDate" asp-route-returnUrl="@selectedUrl"
+               class="btn primary">+ Tarea</a>
+            <a asp-controller="Events" asp-action="Create"
+               asp-route-date="@Model.SelectedUrlDate" asp-route-returnUrl="@selectedUrl"
+               class="btn">+ Evento</a>
+        </div>
+    </div>
+
+    <div class="calendar-layout @(Model.View == "month" ? "" : "wide")">
+    <div class="calendar-container">
+
+        <div class="calendar-navigation">
+
+            <a asp-action="Index"
+               asp-route-year="@Model.PrevDate.Year" asp-route-month="@Model.PrevDate.Month" asp-route-day="@Model.PrevDate.Day"
+               asp-route-show="@showRoute" asp-route-view="@viewRoute"
+               class="calendar-nav-button" aria-label="@unit anterior">‹</a>
+
+            <h2>@title</h2>
+
+            <a asp-action="Index"
+               asp-route-year="@Model.NextDate.Year" asp-route-month="@Model.NextDate.Month" asp-route-day="@Model.NextDate.Day"
+               asp-route-show="@showRoute" asp-route-view="@viewRoute"
+               class="calendar-nav-button" aria-label="@unit siguiente">›</a>
+
+            <a asp-action="Index" asp-route-show="@showRoute" asp-route-view="@viewRoute" class="calendar-today-button">Hoy</a>
+
+            <div class="calendar-filter" role="group" aria-label="Vista del calendario">
+                @foreach (var option in new[] { ("month", "Mes"), ("week", "Semana"), ("day", "Día") })
+                {
+                    <a asp-action="Index"
+                       asp-route-year="@Model.SelectedDate.Year"
+                       asp-route-month="@Model.SelectedDate.Month"
+                       asp-route-day="@Model.SelectedDate.Day"
+                       asp-route-show="@showRoute"
+                       asp-route-view="@(option.Item1 == "month" ? null : option.Item1)"
+                       class="chip @(Model.View == option.Item1 ? "active" : "")"
+                       aria-current="@(Model.View == option.Item1 ? "true" : null)">@option.Item2</a>
+                }
+            </div>
+
+            <div class="calendar-filter" role="group" aria-label="Qué mostrar">
+                @foreach (var option in new[] { ("all", "Todo"), ("tasks", "Tareas"), ("events", "Eventos") })
+                {
+                    <a asp-action="Index"
+                       asp-route-year="@Model.SelectedDate.Year"
+                       asp-route-month="@Model.SelectedDate.Month"
+                       asp-route-day="@Model.SelectedDate.Day"
+                       asp-route-show="@(option.Item1 == "all" ? null : option.Item1)"
+                       asp-route-view="@viewRoute"
+                       class="chip @(Model.Show == option.Item1 ? "active" : "")"
+                       aria-current="@(Model.Show == option.Item1 ? "true" : null)">@option.Item2</a>
+                }
+            </div>
+        </div>
+
+        @if (Model.View == "month")
+        {
+        <div class="calendar-grid">
+
+            @for (int i = 0; i < 7; i++)
+            {
+                <div class="calendar-weekday">
+                    <span class="wd-long">@weekdays[i]</span><span class="wd-short">@weekdaysShort[i]</span>
+                </div>
+            }
+
+            @for (int i = 0; i < Model.FirstDayOffset; i++)
+            {
+                <div class="calendar-day empty"></div>
+            }
+
+            @for (int day = 1; day <= Model.DaysInMonth; day++)
+            {
+                var date = new DateTime(Model.CurrentMonth.Year, Model.CurrentMonth.Month, day);
+                var isToday = date.Date == Model.Today.Date;
+                var isSelected = date.Date == Model.SelectedDate.Date;
+
+                var dayTasks = Model.TasksOn(date);
+                var dayEvents = Model.EventsOn(date);
+                var total = dayTasks.Count + dayEvents.Count;
+                var hasOverdue = dayTasks.Any(t => t.IsOverdue(Model.Today));
+
+                <a asp-action="Index"
+                   asp-route-year="@date.Year"
+                   asp-route-month="@date.Month"
+                   asp-route-day="@date.Day"
+                   asp-route-show="@showRoute"
+                   class="calendar-day @(isToday ? "today" : "") @(isSelected ? "selected" : "") @(total > 0 ? "busy" : "") @(hasOverdue ? "has-overdue" : "")"
+                   aria-label="@Format.LongDate(date)@(total > 0 ? $", {total} elemento(s)" : "")"
+                   aria-current="@(isSelected ? "date" : null)">
+
+                    <div class="calendar-day-number">
+                        @day
+                        @if (isToday)
+                        {
+                            <span class="today-label">Hoy</span>
+                        }
+                    </div>
+
+                    <div class="calendar-day-tasks">
+                        @foreach (var ev in dayEvents.Take(2))
+                        {
+                            <div class="calendar-event ev-@ev.Color" title="@(ev.AllDay ? "" : Format.Time(ev.StartsAt) + " · ")@ev.Title">
+                                @ev.Title
+                            </div>
+                        }
+                        @foreach (var task in dayTasks.Take(Math.Max(0, 3 - Math.Min(2, dayEvents.Count))))
+                        {
+                            <div class="calendar-task priority-@task.Priority.ToLowerInvariant() @(task.IsCompleted ? "completed" : "")"
+                                 title="@task.Title">
+                                @task.Title
+                            </div>
+                        }
+                    </div>
+
+                    @if (total > 0)
+                    {
+                        <span class="calendar-task-count">@total</span>
+                    }
+                </a>
+            }
+
+        </div>
+
+        }
+        else if (Model.View == "week")
+        {
+            <div class="week-view">
+                @foreach (var date in Model.WeekDays)
+                {
+                    var dayEvents = Model.EventsOn(date);
+                    var dayTasks = Model.TasksOn(date);
+                    var dayUrl = Url.Action("Index", new { year = date.Year, month = date.Month, day = date.Day, show = showRoute, view = "day" });
+                    <section class="week-day @(date.Date == Model.Today ? "today" : "") @(date.Date == Model.SelectedDate.Date ? "selected" : "")">
+                        <a class="week-day-head" href="@dayUrl">
+                            <span>@Format.Capitalize(date.ToString("ddd", Format.Es).TrimEnd('.'))</span>
+                            <b>@date.Day</b>
+                        </a>
+                        @foreach (var ev in dayEvents)
+                        {
+                            <div class="calendar-event ev-@ev.Color" title="@ev.Title">@(ev.AllDay ? "" : Format.Time(ev.StartsAt) + " ")@ev.Title</div>
+                        }
+                        @foreach (var task in dayTasks)
+                        {
+                            <div class="calendar-task priority-@task.Priority.ToLowerInvariant() @(task.IsCompleted ? "completed" : "")" title="@task.Title">@task.Title</div>
+                        }
+                        @if (!dayEvents.Any() && !dayTasks.Any())
+                        {
+                            <p class="muted small-text">Libre</p>
+                        }
+                        <a class="week-add" asp-controller="Tasks" asp-action="Create" asp-route-dueDate="@date.ToString("yyyy-MM-dd")" asp-route-returnUrl="@selectedUrl" aria-label="Agregar tarea el @Format.Date(date)">+ tarea</a>
+                    </section>
+                }
+            </div>
+        }
+        else
+        {
+            var allDay = Model.SelectedDayEvents.Where(e => e.AllDay).ToList();
+            var timed = Model.SelectedDayEvents.Where(e => !e.AllDay).ToList();
+            <div class="day-view">
+                @if (allDay.Any() || Model.SelectedDayTasks.Any())
+                {
+                    <div class="day-allday">
+                        <span class="day-hour">Todo el día</span>
+                        <div>
+                            @foreach (var ev in allDay)
+                            {
+                                <div class="calendar-event ev-@ev.Color">@ev.Title</div>
+                            }
+                            @foreach (var task in Model.SelectedDayTasks)
+                            {
+                                <div class="calendar-task priority-@task.Priority.ToLowerInvariant() @(task.IsCompleted ? "completed" : "")">✓ @task.Title</div>
+                            }
+                        </div>
+                    </div>
+                }
+                @for (int h = 6; h <= 22; h++)
+                {
+                    var hourEvents = timed.Where(e => e.StartsAt.Hour == h || (h == 6 && e.StartsAt.Hour < 6) || (h == 22 && e.StartsAt.Hour > 22)).ToList();
+                    <div class="day-row @(Model.SelectedDate.Date == Model.Today && DateTime.Now.Hour == h ? "now" : "")">
+                        <span class="day-hour">@($"{h:00}:00")</span>
+                        <div>
+                            @foreach (var ev in hourEvents)
+                            {
+                                <a class="calendar-event ev-@ev.Color" asp-controller="Events" asp-action="Edit" asp-route-id="@ev.Id" asp-route-returnUrl="@selectedUrl">
+                                    @Format.Time(ev.StartsAt)@(ev.EndsAt != null ? "–" + Format.Time(ev.EndsAt.Value) : "") · @ev.Title@(string.IsNullOrWhiteSpace(ev.Location) ? "" : " · " + ev.Location)
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="calendar-legend">
+            <span><span class="legend-dot today-dot"></span> Día actual</span>
+            <span><span class="legend-dot task-dot"></span> Tarea pendiente</span>
+            <span><span class="legend-dot completed-dot"></span> Tarea completada</span>
+            <span><span class="legend-dot event-dot"></span> Evento</span>
+            <span><span class="legend-dot overdue-dot"></span> Tarea vencida</span>
+        </div>
+
+    </div>
+
+    <aside class="calendar-side">
+    <section class="calendar-details">
+        <div class="calendar-details-header">
+            <div>
+                <h2>Detalles del día</h2>
+                <p>@Format.LongDate(Model.SelectedDate)</p>
+            </div>
+        </div>
+
+        @if (Model.SelectedDayEvents.Count == 0 && Model.SelectedDayTasks.Count == 0)
+        {
+            <div class="calendar-empty-details">
+                <p>No tienes nada programado para este día.</p>
+                <div class="header-actions">
+                    <a asp-controller="Tasks" asp-action="Create" asp-route-dueDate="@Model.SelectedUrlDate" asp-route-returnUrl="@selectedUrl" class="btn small primary">+ Tarea este día</a>
+                    <a asp-controller="Events" asp-action="Create" asp-route-date="@Model.SelectedUrlDate" asp-route-returnUrl="@selectedUrl" class="btn small">+ Evento este día</a>
+                </div>
+            </div>
+        }
+
+        @if (Model.SelectedDayEvents.Count > 0)
+        {
+            <h3 class="details-subtitle">Eventos</h3>
+            <div class="calendar-details-list">
+                @foreach (var ev in Model.SelectedDayEvents)
+                {
+                    <article class="calendar-detail-task calendar-detail-event ev-border-@ev.Color">
+                        <div>
+                            <h3>@ev.Title</h3>
+                            @if (!string.IsNullOrWhiteSpace(ev.Description))
+                            {
+                                <p>@ev.Description</p>
+                            }
+                            <div class="calendar-task-information">
+                                <span>@(ev.AllDay ? "Todo el día" : Format.Time(ev.StartsAt) + (ev.EndsAt != null ? " – " + Format.Time(ev.EndsAt.Value) : ""))</span>
+                                @if (!string.IsNullOrWhiteSpace(ev.Location))
+                                {
+                                    <span>📍 @ev.Location</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="item-actions">
+                            <a class="btn soft small" asp-controller="Events" asp-action="Edit" asp-route-id="@ev.Id" asp-route-returnUrl="@selectedUrl">✎ Editar</a>
+                            <form asp-controller="Events" asp-action="Delete" asp-route-id="@ev.Id" method="post" data-confirm="¿Eliminar el evento «@ev.Title»?">
+                                <input type="hidden" name="returnUrl" value="@selectedUrl" />
+                                <button class="danger-link" type="submit">Eliminar</button>
+                            </form>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+
+        @if (Model.SelectedDayTasks.Count > 0)
+        {
+            <h3 class="details-subtitle">Tareas</h3>
+            <div class="calendar-details-list">
+                @foreach (var task in Model.SelectedDayTasks)
+                {
+                    <article class="calendar-detail-task @(task.IsCompleted ? "completed" : "")">
+                        <div>
+                            <h3>@task.Title</h3>
+                            @if (!string.IsNullOrWhiteSpace(task.Description))
+                            {
+                                <p>@task.Description</p>
+                            }
+                            <div class="calendar-task-information">
+                                <span class="priority priority-@task.Priority.ToLowerInvariant()">Prioridad: @task.Priority</span>
+                                <span>@(task.IsCompleted ? "Completada" : task.IsOverdue(Model.Today) ? "Vencida" : "Pendiente")</span>
+                            </div>
+                        </div>
+                        <div class="item-actions">
+                            <form asp-controller="Tasks" asp-action="Toggle" asp-route-id="@task.Id" method="post">
+                                <input type="hidden" name="returnUrl" value="@selectedUrl" />
+                                <button class="btn small" type="submit">@(task.IsCompleted ? "Marcar pendiente" : "Completar")</button>
+                            </form>
+                            <a class="btn soft small" asp-controller="Tasks" asp-action="Edit" asp-route-id="@task.Id" asp-route-returnUrl="@selectedUrl">✎ Editar</a>
+                            <form asp-controller="Tasks" asp-action="Delete" asp-route-id="@task.Id" method="post" data-confirm="¿Eliminar la tarea «@task.Title»?">
+                                <input type="hidden" name="returnUrl" value="@selectedUrl" />
+                                <button class="danger-link" type="submit">Eliminar</button>
+                            </form>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="calendar-details upcoming">
+        <div class="calendar-details-header">
+            <div>
+                <h2>Próximos 7 días</h2>
+                <p>Tareas pendientes y eventos que se acercan.</p>
+            </div>
+        </div>
+
+        @if (Model.Upcoming.Count == 0)
+        {
+            <p class="muted">No hay actividades próximas.</p>
+        }
+        else
+        {
+            <ul class="agenda">
+                @foreach (var item in Model.Upcoming)
+                {
+                    <li class="agenda-item @item.Kind @(item.Overdue ? "overdue" : "")">
+                        <a asp-action="Index" asp-route-year="@item.When.Year" asp-route-month="@item.When.Month" asp-route-day="@item.When.Day">
+                            <span class="agenda-date">@(item.When.Date == Model.Today ? "Hoy" : item.When.Date == Model.Today.AddDays(1) ? "Mañana" : Format.Date(item.When))</span>
+                            <strong>@item.Title</strong>
+                            <small>@item.Detail@(item.Overdue ? " · Vencida" : "")</small>
+                        </a>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+    </aside>
+    </div>
+
+</div>

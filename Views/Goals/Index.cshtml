@@ -1,0 +1,99 @@
+@model GoalListViewModel
+@{ ViewData["Title"] = "Metas"; }
+
+<div class="page-head">
+    <div>
+        <h1>Metas</h1>
+        <p>@Model.PendingCount en curso · @Model.CompletedCount cumplida(s)@(Model.OverdueCount > 0 ? $" · {Model.OverdueCount} vencida(s)" : "")</p>
+    </div>
+    <a class="btn primary" asp-action="Create">+ Nueva meta</a>
+</div>
+
+@if (Model.TotalCount > 0)
+{
+    <form class="card filters" method="get" asp-action="Index" aria-label="Filtrar metas">
+        <div class="filter-field">
+            <label for="status">Estado</label>
+            <select id="status" name="status">
+                <option value="all" selected="@(Model.Status == "all")">Todas</option>
+                <option value="pending" selected="@(Model.Status == "pending")">En curso</option>
+                <option value="completed" selected="@(Model.Status == "completed")">Cumplidas</option>
+                <option value="overdue" selected="@(Model.Status == "overdue")">Vencidas</option>
+            </select>
+        </div>
+        <div class="filter-field">
+            <label for="category">Categoría</label>
+            <select id="category" name="category">
+                <option value="" selected="@(Model.Category == "")">Todas</option>
+                @foreach (var c in Goal.Categories)
+                {
+                    <option value="@c" selected="@(Model.Category == c)">@c</option>
+                }
+            </select>
+        </div>
+        <div class="filter-actions">
+            <button class="btn primary" type="submit">Aplicar</button>
+            @if (Model.Status != "all" || Model.Category != "")
+            {
+                <a class="btn" asp-action="Index">Limpiar</a>
+            }
+        </div>
+    </form>
+}
+
+<div class="goal-grid">
+@foreach (var goal in Model.Goals)
+{
+    var status = goal.Status(Model.Today);
+    Model.Steps.TryGetValue(goal.Id, out var steps);
+    <section class="card goal-card goal-@status">
+        <div class="section-head">
+            <h2><a asp-action="Details" asp-route-id="@goal.Id">@goal.Title</a></h2>
+            <span class="percent">@goal.Progress%</span>
+        </div>
+        <p class="goal-meta">
+            <span class="tag">@goal.Category</span>
+            <span class="badge @(status == "completed" ? "done" : status == "overdue" ? "overdue" : goal.DaysLeft(Model.Today) <= 7 ? "soon" : "neutral")">@goal.TimeLeftText(Model.Today)</span>
+        </p>
+        @if (!string.IsNullOrWhiteSpace(goal.Description))
+        {
+            <p>@goal.Description</p>
+        }
+        <div class="progress @(status == "completed" ? "budget-ok" : "")" role="progressbar" aria-valuenow="@goal.Progress" aria-valuemin="0" aria-valuemax="100" aria-label="Progreso de @goal.Title"><span style="width:@goal.Progress%"></span></div>
+        <small>@goal.Current.ToString("N0", Format.Es) de @goal.Target.ToString("N0", Format.Es) · Fecha límite: @Format.Date(goal.Deadline)@(steps.Total > 0 ? $" · Pasos: {steps.Done}/{steps.Total}" : "")</small>
+
+        @if (!goal.IsCompleted)
+        {
+            <form asp-action="AddProgress" asp-route-id="@goal.Id" method="post" class="quick-progress">
+                <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                <label class="visually-hidden" for="amount-@goal.Id">Cantidad a sumar</label>
+                <input id="amount-@goal.Id" name="amount" type="number" step="0.01" placeholder="+ progreso" required />
+                <button class="btn small" type="submit">Sumar</button>
+            </form>
+        }
+
+        <div class="item-actions">
+            <a class="btn soft small" asp-action="Details" asp-route-id="@goal.Id">Ver detalle →</a>
+            <a class="btn soft small" asp-action="Edit" asp-route-id="@goal.Id">✎ Editar</a>
+            <form class="inline" asp-action="Delete" asp-route-id="@goal.Id" method="post" data-confirm="¿Eliminar la meta «@goal.Title» y sus pasos?">
+                <button class="danger-link" type="submit">Eliminar</button>
+            </form>
+        </div>
+    </section>
+}
+</div>
+@if (!Model.Goals.Any())
+{
+    <section class="card empty-state">
+        @if (Model.TotalCount == 0)
+        {
+            <p>No tienes metas.</p>
+            <a class="btn primary" asp-action="Create">Crear mi primera meta</a>
+        }
+        else
+        {
+            <p>Ninguna meta coincide con los filtros.</p>
+            <a class="btn" asp-action="Index">Ver todas</a>
+        }
+    </section>
+}

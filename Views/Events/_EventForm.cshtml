@@ -1,0 +1,68 @@
+@model EventFormModel
+@{
+    var isEdit = Model.Id > 0;
+}
+
+<form asp-controller="Events" asp-action="@(isEdit ? "Edit" : "Create")" method="post">
+    <div asp-validation-summary="ModelOnly" class="error" role="alert"></div>
+
+    @if (isEdit)
+    {
+        <input asp-for="Id" type="hidden" />
+    }
+    <input asp-for="ReturnUrl" type="hidden" />
+
+    <label asp-for="Title">Título</label>
+    <input asp-for="Title" maxlength="120" required />
+    <span asp-validation-for="Title" class="field-error"></span>
+
+    <label asp-for="Description">Descripción <small class="muted">(opcional)</small></label>
+    <textarea asp-for="Description" maxlength="1000" rows="3"></textarea>
+    <span asp-validation-for="Description" class="field-error"></span>
+
+    <label asp-for="Date">Fecha</label>
+    <input asp-for="Date" type="date" min="2000-01-01" max="2100-12-31" required />
+    <span asp-validation-for="Date" class="field-error"></span>
+
+    <div class="form-row">
+        <div>
+            <label asp-for="StartTime">Hora de inicio <small class="muted">(vacío = todo el día)</small></label>
+            <input id="StartTime" name="StartTime" type="time" value="@(Model.StartTime?.ToString(@"hh\:mm"))" />
+            <span asp-validation-for="StartTime" class="field-error"></span>
+        </div>
+        <div>
+            <label asp-for="EndTime">Hora de fin <small class="muted">(opcional)</small></label>
+            <input id="EndTime" name="EndTime" type="time" value="@(Model.EndTime?.ToString(@"hh\:mm"))" />
+            <span asp-validation-for="EndTime" class="field-error"></span>
+        </div>
+    </div>
+
+    <label asp-for="Location">Lugar <small class="muted">(opcional)</small></label>
+    <input asp-for="Location" maxlength="150" />
+    <span asp-validation-for="Location" class="field-error"></span>
+
+    <label for="ReminderMinutesBefore">Recordatorio</label>
+    <select id="ReminderMinutesBefore" name="ReminderMinutesBefore">
+        @foreach (var (value, name) in EventFormModel.ReminderOptions)
+        {
+            <option value="@(value?.ToString() ?? "")" selected="@(Model.ReminderMinutesBefore == value)">@name</option>
+        }
+    </select>
+
+    <fieldset class="color-picker">
+        <legend>Color</legend>
+        @foreach (var color in CalendarEvent.Colors)
+        {
+            <label class="color-option ev-@color.Id">
+                <input type="radio" name="Color" value="@color.Id" checked="@(Model.Color == color.Id)" />
+                <span>@color.Name</span>
+            </label>
+        }
+    </fieldset>
+    <span asp-validation-for="Color" class="field-error"></span>
+
+    <div class="form-actions">
+        <button class="btn primary" type="submit">@(isEdit ? "Guardar cambios" : "Crear evento")</button>
+        <a class="btn" href="@(!string.IsNullOrEmpty(Model.ReturnUrl) && Url.IsLocalUrl(Model.ReturnUrl) ? Model.ReturnUrl : Url.Action("Index", "Calendar"))">Cancelar</a>
+    </div>
+</form>

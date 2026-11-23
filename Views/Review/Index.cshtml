@@ -1,0 +1,113 @@
+@model ReviewViewModel
+@{
+    ViewData["Title"] = "Domingo de calma";
+    var r = Model.Review;
+    var balance = Model.Earned - Model.Spent;
+    var byKind = Model.Footprints.GroupBy(f => f.Kind).ToDictionary(g => g.Key, g => g.Count());
+    int K(string k) => byKind.TryGetValue(k, out var n) ? n : 0;
+}
+
+<section class="page-head">
+    <div>
+        <p class="muted">CAMINO</p>
+        <h1>🍃 Domingo de calma</h1>
+        <p class="muted">Cinco minutos para mirar tu semana con cariño, poner en orden lo que quedó y elegir tus 3 pasos para la próxima.</p>
+    </div>
+    <span class="review-week">Semana del @Weeks.Range(Model.Monday)</span>
+</section>
+
+<ol class="review-steps">
+    <li class="card">
+        <h2><span class="review-num">1</span> Mira lo que caminaste</h2>
+        <div class="stats review-stats">
+            <a class="stat" asp-controller="Path" asp-action="Index"><small>Huellas</small><b>@Model.Footprints.Count</b><span class="change">en tu sendero</span></a>
+            <div class="stat"><small>Tareas terminadas</small><b>@K("task")</b><span class="change">@K("step") paso(s) de metas</span></div>
+            <div class="stat"><small>Enfoque</small><b>@Model.FocusMinutes min</b><span class="change">@K("focus") sesión(es)</span></div>
+            <div class="stat"><small>Hábitos</small><b>@Model.HabitChecks</b><span class="change">días cumplidos</span></div>
+            @if (Model.MoodAverage is double mood)
+            {
+                <div class="stat"><small>Ánimo promedio</small><b>@MoodEntry.EmojiFor((int)Math.Round(mood))</b><span class="change">@MoodEntry.TextFor((int)Math.Round(mood))</span></div>
+            }
+        </div>
+        @if (Model.TasksDone.Any())
+        {
+            <details class="review-details">
+                <summary>Ver lo que terminaste (@Model.TasksDone.Count)</summary>
+                <ul class="simple-list">@foreach (var t in Model.TasksDone) { <li>✓ @t</li> }</ul>
+            </details>
+        }
+        @if (Model.Footprints.Count == 0)
+        {
+            <p class="muted">Esta semana el sendero descansó. No pasa nada: hoy es buen día para elegir un paso pequeño.</p>
+        }
+    </li>
+
+    <li class="card">
+        <h2><span class="review-num">2</span> Tu dinero esta semana</h2>
+        <div class="stats review-stats">
+            <div class="stat"><small>Ingresos</small><b class="money-in">@Format.Money(Model.Earned)</b></div>
+            <div class="stat"><small>Gastos</small><b class="money-out">@Format.Money(Model.Spent)</b>
+                @if (Model.TopCategory.Amount > 0) { <span class="change">Más en: @Model.TopCategory.Category (@Format.Money(Model.TopCategory.Amount))</span> }
+            </div>
+            <div class="stat"><small>Balance</small><b class="@(balance >= 0 ? "money-in" : "money-out")">@(balance < 0 ? "-" : "")@Format.Money(Math.Abs(balance))</b></div>
+        </div>
+        <p class="muted small-text">¿Algún gasto te sorprendió? Revisa tus finanzas y ajusta tu presupuesto si hace falta.</p>
+        <a class="btn soft small" asp-controller="Finance" asp-action="Index">💰 Revisar mis finanzas</a>
+    </li>
+
+    <li class="card">
+        <h2><span class="review-num">3</span> Pon en orden lo que quedó</h2>
+        <ul class="simple-list">
+            <li>@(Model.Overdue == 0 ? "✓ No tienes tareas vencidas. ¡Bien!" : $"⚠ Tienes {Model.Overdue} tarea(s) vencida(s): reprográmalas o suéltalas.")
+                @if (Model.Overdue > 0) { <a class="btn soft small" asp-controller="Tasks" asp-action="Index" asp-route-status="overdue">Ver vencidas →</a> }</li>
+            <li>📅 La próxima semana tienes @Model.PendingNextWeek tarea(s) con fecha.</li>
+        </ul>
+        @if (Model.GoalsInProgress.Any())
+        {
+            <h3>Tus metas en curso</h3>
+            <div class="review-goals">
+                @foreach (var g in Model.GoalsInProgress)
+                {
+                    <a class="review-goal" asp-controller="Goals" asp-action="Details" asp-route-id="@g.Id">
+                        <span>@g.Title</span>
+                        <div class="progress"><span style="width:@g.Progress%"></span></div>
+                        <small class="muted">@g.Progress% · @g.TimeLeftText(Model.Today)</small>
+                    </a>
+                }
+            </div>
+        }
+    </li>
+
+    <li class="card">
+        <h2><span class="review-num">4</span> Cierra la semana y elige tus pasos</h2>
+        <form asp-action="Save" method="post" class="review-form">
+            <input type="hidden" name="week" value="@Model.Monday.ToString("yyyy-MM-dd")" />
+            <label for="wins">¿Qué salió bien esta semana? ¿Qué agradeces?</label>
+            <textarea id="wins" name="wins" maxlength="1000" rows="3" placeholder="Ej: terminé el informe, hablé con mi mamá, dormí mejor…">@r?.Wins</textarea>
+
+            <p class="review-label">Tus 3 pasos para la próxima semana</p>
+            <div class="review-three">
+                <input name="step1" maxlength="120" value="@r?.Step1" placeholder="Paso 1" aria-label="Paso 1" />
+                <input name="step2" maxlength="120" value="@r?.Step2" placeholder="Paso 2" aria-label="Paso 2" />
+                <input name="step3" maxlength="120" value="@r?.Step3" placeholder="Paso 3" aria-label="Paso 3" />
+            </div>
+            <label class="inline"><input type="checkbox" name="createTasks" value="true" /> Convertir mis pasos en tareas para la próxima semana</label>
+            <input type="hidden" name="createTasks" value="false" />
+
+            <button class="btn primary" type="submit">@(r == null ? "Guardar mi domingo de calma" : "Actualizar")</button>
+            @if (r != null)
+            {
+                <p class="muted small-text">Guardado el @r.CreatedAt.ToString("dddd d 'de' MMMM, HH:mm", Format.Es). 🍃 Ya dejaste tu huella de esta semana.</p>
+            }
+        </form>
+    </li>
+</ol>
+
+@if (!Model.IsCurrentWeek)
+{
+    <p><a class="btn soft" asp-action="Index" asp-route-week="@Weeks.StartOf(Model.Today).ToString("yyyy-MM-dd")">Ir al repaso de esta semana →</a></p>
+}
+else if (Model.Monday == Weeks.StartOf(Model.Today))
+{
+    <p><a class="btn soft" asp-action="Index" asp-route-week="@Model.Monday.AddDays(-7).ToString("yyyy-MM-dd")">← Ver el repaso de la semana pasada</a></p>
+}

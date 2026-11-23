@@ -1,0 +1,27 @@
+@model LoginViewModel
+@{ ViewData["Title"] = "Iniciar sesión"; ViewData["AuthPage"] = true; }
+
+<div class="auth-card">
+    <h1>Bienvenido de nuevo</h1>
+    <p class="muted">Tu camino te está esperando.</p>
+
+    <form asp-action="Login" method="post">
+        <div asp-validation-summary="ModelOnly" class="error" role="alert"></div>
+
+        <label asp-for="Email">Correo</label>
+        <input asp-for="Email" type="email" autocomplete="email" required />
+        <span asp-validation-for="Email" class="field-error"></span>
+
+        <label asp-for="Password">Contraseña</label>
+        <input asp-for="Password" type="password" autocomplete="current-password" required />
+        <span asp-validation-for="Password" class="field-error"></span>
+
+        <button class="btn primary full" type="submit">Entrar</button>
+    </form>
+
+    <div class="auth-alt">
+        <a class="btn soft small" asp-action="ForgotPassword">🔑 ¿Olvidaste tu contraseña?</a>
+        <p class="muted">¿No tienes cuenta?</p>
+        <a class="btn full outline" asp-action="Register">Crear cuenta</a>
+    </div>
+</div>

@@ -1,0 +1,7 @@
+@model int
+<a class="bell @(ViewContext.RouteData.Values["controller"]?.ToString() == "Notifications" ? "active" : "")"
+   href="/Notifications" title="Avisos" aria-label="Avisos: @Model sin leer">
+    <span aria-hidden="true">🔔</span>
+    <span class="bell-count" id="bellCount" @(Model == 0 ? "hidden" : "")>@(Model > 99 ? "99+" : Model.ToString())</span>
+    <span class="bell-text">Avisos</span>
+</a>

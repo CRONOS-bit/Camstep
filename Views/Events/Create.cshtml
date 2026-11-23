@@ -1,0 +1,8 @@
+@model EventFormModel
+@{ ViewData["Title"] = "Nuevo evento"; }
+
+<div class="form-card">
+    <h1>Nuevo evento</h1>
+    <p class="muted">Un evento es algo que ocurre en una fecha (una cita, una reunión, un cumpleaños). No necesita marcarse como completado.</p>
+    <partial name="_EventForm" model="Model" />
+</div>

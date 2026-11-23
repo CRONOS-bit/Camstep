@@ -1,0 +1,73 @@
+@model ProfilePageViewModel
+@{ ViewData["Title"] = "Mi perfil"; }
+
+<div class="page-head">
+    <div>
+        <h1>Mi perfil</h1>
+        <p>Cuenta creada el @Format.LongDate(Model.Profile.CreatedAt.ToLocalTime()).</p>
+    </div>
+</div>
+
+<div class="grid-2">
+    <section class="card">
+        <h2>Mis datos</h2>
+        <form asp-action="Update" method="post">
+            <label asp-for="Profile.Name">Nombre</label>
+            <input asp-for="Profile.Name" maxlength="80" autocomplete="name" required />
+            <span asp-validation-for="Profile.Name" class="field-error"></span>
+
+            <label asp-for="Profile.Email">Correo</label>
+            <input asp-for="Profile.Email" type="email" autocomplete="email" required />
+            <span asp-validation-for="Profile.Email" class="field-error"></span>
+
+            <label asp-for="Profile.CurrentPassword">Contraseña actual <small class="muted">(solo si cambias el correo)</small></label>
+            <input asp-for="Profile.CurrentPassword" type="password" autocomplete="current-password" value="" />
+            <span asp-validation-for="Profile.CurrentPassword" class="field-error"></span>
+
+            <button class="btn primary" type="submit">Guardar datos</button>
+        </form>
+    </section>
+
+    <section class="card">
+        <h2>Cambiar contraseña</h2>
+        <form asp-action="ChangePassword" method="post">
+            <label asp-for="Password.CurrentPassword">Contraseña actual</label>
+            <input asp-for="Password.CurrentPassword" type="password" autocomplete="current-password" required value="" />
+            <span asp-validation-for="Password.CurrentPassword" class="field-error"></span>
+
+            <label asp-for="Password.NewPassword">Nueva contraseña</label>
+            <input asp-for="Password.NewPassword" type="password" autocomplete="new-password" minlength="6" required value="" />
+            <span asp-validation-for="Password.NewPassword" class="field-error"></span>
+
+            <label asp-for="Password.ConfirmPassword">Confirmar nueva contraseña</label>
+            <input asp-for="Password.ConfirmPassword" type="password" autocomplete="new-password" required value="" />
+            <span asp-validation-for="Password.ConfirmPassword" class="field-error"></span>
+
+            <button class="btn primary" type="submit">Cambiar contraseña</button>
+        </form>
+    </section>
+</div>
+
+<section class="card danger-zone">
+    <h2>Eliminar mi cuenta</h2>
+    <p>
+        Se borrarán para siempre tu cuenta y todo lo que contiene:
+        @string.Join(", ", Model.Counts.Select(c => $"{c.Value} {c.Key}")),
+        además de tus preferencias y archivos. <strong>Esta acción no se puede deshacer.</strong>
+    </p>
+    <form asp-action="Delete" method="post" data-confirm="Última confirmación: ¿eliminar tu cuenta y TODOS tus datos?">
+        <div class="form-row">
+            <div>
+                <label asp-for="Delete.Password">Tu contraseña</label>
+                <input asp-for="Delete.Password" type="password" autocomplete="current-password" required value="" />
+                <span asp-validation-for="Delete.Password" class="field-error"></span>
+            </div>
+            <div>
+                <label asp-for="Delete.Confirmation">Escribe ELIMINAR</label>
+                <input asp-for="Delete.Confirmation" autocomplete="off" required />
+                <span asp-validation-for="Delete.Confirmation" class="field-error"></span>
+            </div>
+        </div>
+        <button class="btn danger" type="submit">Eliminar mi cuenta</button>
+    </form>
+</section>

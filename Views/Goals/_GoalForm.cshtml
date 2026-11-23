@@ -1,0 +1,61 @@
+@model Goal
+@{ var isEdit = Model.Id > 0; }
+
+<form asp-action="@(isEdit ? "Edit" : "Create")" method="post">
+    <div asp-validation-summary="ModelOnly" class="error" role="alert"></div>
+
+    @if (isEdit)
+    {
+        <input asp-for="Id" type="hidden" />
+    }
+
+    <label asp-for="Title">Nombre</label>
+    <input asp-for="Title" maxlength="120" required />
+    <span asp-validation-for="Title" class="field-error"></span>
+
+    <label asp-for="Description">Descripción <small class="muted">(opcional)</small></label>
+    <textarea asp-for="Description" maxlength="1000" rows="3"></textarea>
+    <span asp-validation-for="Description" class="field-error"></span>
+
+    <div class="form-row">
+        <div>
+            <label asp-for="Target">Objetivo <small class="muted">(pesos, kilos, libros, días…)</small></label>
+            <input asp-for="Target" type="number" step="0.01" min="0.01" inputmode="decimal" required
+                   value="@(Model.Target > 0 ? Model.Target.ToString(System.Globalization.CultureInfo.InvariantCulture) : "")" />
+            <span asp-validation-for="Target" class="field-error"></span>
+        </div>
+        <div>
+            <label asp-for="Current">Progreso actual</label>
+            <input asp-for="Current" type="number" step="0.01" min="0" inputmode="decimal"
+                   value="@Model.Current.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+            <span asp-validation-for="Current" class="field-error"></span>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div>
+            <label asp-for="Deadline">Fecha límite</label>
+            <input asp-for="Deadline" type="date" min="2000-01-01" max="2100-12-31" required />
+            <span asp-validation-for="Deadline" class="field-error"></span>
+        </div>
+        <div>
+            <label asp-for="Category">Categoría</label>
+            <select asp-for="Category">
+                @foreach (var c in Goal.Categories)
+                {
+                    <option value="@c" selected="@(Model.Category == c)">@c</option>
+                }
+            </select>
+            <span asp-validation-for="Category" class="field-error"></span>
+        </div>
+    </div>
+
+    <label asp-for="Notes">Notas <small class="muted">(opcional)</small></label>
+    <textarea asp-for="Notes" maxlength="2000" rows="4" placeholder="Ideas, recordatorios, por qué es importante para ti…"></textarea>
+    <span asp-validation-for="Notes" class="field-error"></span>
+
+    <div class="form-actions">
+        <button class="btn primary" type="submit">@(isEdit ? "Guardar cambios" : "Guardar")</button>
+        <a class="btn" asp-action="Index">Cancelar</a>
+    </div>
+</form>

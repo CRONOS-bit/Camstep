@@ -1,0 +1,108 @@
+@model FocusViewModel
+@{
+    ViewData["Title"] = "Modo enfoque";
+    var selected = Model.Tasks.FirstOrDefault(t => t.Id == Model.SelectedTaskId);
+}
+
+<div class="focus-page" id="focusPage">
+    <section class="page-head focus-head">
+        <div>
+            <p class="muted">CAMINO</p>
+            <h1>🌿 Modo enfoque</h1>
+            <p class="muted">Una sola cosa, con toda tu atención. Al terminar, tu sendero gana una huella.</p>
+        </div>
+    </section>
+
+    <div class="focus-layout">
+        <section class="card focus-card" aria-labelledby="focusTitle">
+            <h2 id="focusTitle" class="visually-hidden">Temporizador</h2>
+
+            <div class="focus-setup" id="focusSetup">
+                <label for="focusTask">¿En qué te vas a enfocar?</label>
+                <select id="focusTask">
+                    <option value="">Algo sin tarea (estudiar, leer, ordenar…)</option>
+                    @foreach (var t in Model.Tasks)
+                    {
+                        <option value="@t.Id" selected="@(t.Id == Model.SelectedTaskId)">@t.Title · @Format.Date(t.DueDate)</option>
+                    }
+                </select>
+
+                <fieldset class="focus-durations">
+                    <legend>Duración</legend>
+                    @foreach (var m in new[] { 15, 25, 45, 50 })
+                    {
+                        <label class="chip"><input type="radio" name="focusMinutes" value="@m" checked="@(m == 25)" /> @m min</label>
+                    }
+                </fieldset>
+
+                <label class="inline"><input type="checkbox" id="focusAmbient" checked /> Poner música ambiente 🌿</label>
+                <label class="inline"><input type="checkbox" id="focusCalm" checked /> Pantalla tranquila (esconde el menú mientras te enfocas)</label>
+            </div>
+
+            <div class="focus-timer" id="focusTimer" aria-live="polite">
+                <svg class="focus-ring" viewBox="0 0 220 220" aria-hidden="true">
+                    <circle class="focus-ring-bg" cx="110" cy="110" r="96" />
+                    <circle class="focus-ring-fg" id="focusRing" cx="110" cy="110" r="96" />
+                </svg>
+                <div class="focus-center">
+                    <div class="focus-raccoon"><partial name="_Logo" model="@("")" /></div>
+                    <div class="focus-time" id="focusTime">25:00</div>
+                    <div class="focus-phase" id="focusPhase">Listo para empezar</div>
+                </div>
+            </div>
+            <p class="focus-task-name" id="focusTaskName">@(selected?.Title ?? "")</p>
+
+            <div class="focus-actions">
+                <button type="button" class="btn primary" id="focusStart">Empezar</button>
+                <button type="button" class="btn" id="focusPause" hidden>Pausar</button>
+                <button type="button" class="btn" id="focusFinish" hidden>Terminar ya</button>
+                <button type="button" class="danger-link" id="focusCancel" hidden>Cancelar</button>
+            </div>
+
+            <div class="focus-done" id="focusDone" hidden>
+                <p id="focusDoneText">¡Sesión completa!</p>
+                <label class="inline" id="focusMarkWrap"><input type="checkbox" id="focusMarkDone" /> Marcar la tarea como terminada</label>
+                <div class="item-actions">
+                    <button type="button" class="btn primary" id="focusSave">Descansar 5 min</button>
+                    <button type="button" class="btn" id="focusSaveOnly">Listo</button>
+                </div>
+            </div>
+        </section>
+
+        <aside class="focus-side">
+            <section class="card">
+                <h2>Hoy</h2>
+                <div class="focus-stats">
+                    <div><b>@Model.TodayMinutes</b><small>minutos</small></div>
+                    <div><b>@Model.TodaySessions</b><small>sesiones</small></div>
+                    <div><b>@Model.WeekMinutes</b><small>min en 7 días</small></div>
+                </div>
+            </section>
+            <section class="card">
+                <h2>Últimas sesiones</h2>
+                @if (!Model.Recent.Any())
+                {
+                    <p class="muted">Aquí verás tus sesiones. La primera es la más importante.</p>
+                }
+                else
+                {
+                    <ul class="simple-list">
+                        @foreach (var s in Model.Recent)
+                        {
+                            <li><b>@s.Minutes min</b> · @(string.IsNullOrEmpty(s.TaskTitle) ? "Enfoque libre" : s.TaskTitle) <small class="muted">· @s.EndedAt.ToString("ddd d, HH:mm", Format.Es)</small></li>
+                        }
+                    </ul>
+                }
+            </section>
+            <section class="card focus-tips">
+                <h2>Para enfocarte mejor</h2>
+                <ul>
+                    <li>Silencia el celular o déjalo lejos.</li>
+                    <li>Ten agua cerca.</li>
+                    <li>Si te llega una idea, anótala y sigue.</li>
+                    <li>Al terminar, descansa de verdad: estira y mira lejos.</li>
+                </ul>
+            </section>
+        </aside>
+    </div>
+</div>

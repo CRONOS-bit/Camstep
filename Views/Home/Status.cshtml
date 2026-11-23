@@ -1,0 +1,9 @@
+@{
+    ViewData["Title"] = "Página no encontrada";
+    int code = ViewBag.Code ?? 404;
+}
+<div class="card empty-state">
+    <h1>@(code == 404 ? "No encontramos esa página" : $"Error {code}")</h1>
+    <p class="muted">@(code == 404 ? "Puede que el enlace esté mal escrito o que el elemento ya no exista." : "No se pudo completar la solicitud.")</p>
+    <a class="btn primary" href="/">Volver al inicio</a>
+</div>

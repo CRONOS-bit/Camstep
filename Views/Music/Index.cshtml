@@ -1,0 +1,195 @@
+@model MusicViewModel
+@{
+    ViewData["Title"] = "Mi música";
+
+    static string Size(long bytes) => bytes >= 1024 * 1024
+        ? (bytes / 1024d / 1024d).ToString("0.0", Format.Es) + " MB"
+        : Math.Max(1, bytes / 1024) + " KB";
+}
+<section class="page-head">
+    <div><p class="muted">TU AMBIENTE</p><h1>Mi música</h1><p class="muted">Tu biblioteca personal: solo tú ves y escuchas tus canciones.</p></div>
+    <a class="btn" asp-controller="Home" asp-action="Index">Volver al inicio</a>
+</section>
+
+<div class="grid-2">
+    <section class="card music-card">
+        <h2>Añadir una canción o sonido</h2>
+        <p class="muted">Sube archivos que tengas derecho a usar. Admite MP3, WAV, OGG, M4A, AAC y FLAC (máximo 50 MB por archivo).</p>
+        <form asp-action="Upload" method="post" enctype="multipart/form-data">
+            <label for="audio">Archivo de audio</label>
+            <input id="audio" name="audio" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac" required />
+            <button class="btn primary full" type="submit">Añadir a mi biblioteca</button>
+        </form>
+    </section>
+
+    <section class="card music-card">
+        <h2>Nueva lista de reproducción</h2>
+        <p class="muted">Agrupa canciones para estudiar, entrenar o descansar.</p>
+        <form asp-action="CreatePlaylist" method="post">
+            <label for="playlistName">Nombre de la lista</label>
+            <input id="playlistName" name="name" maxlength="60" placeholder="Ej: Concentración" required />
+            <button class="btn full" type="submit">Crear lista</button>
+        </form>
+    </section>
+</div>
+
+<section class="card music-card sc-card" id="soundcloud">
+    <div class="section-head">
+        <h2><span class="sc-badge" aria-hidden="true">☁</span> SoundCloud</h2>
+        <span class="muted">@Model.SoundCloud.Count guardado(s)</span>
+    </div>
+    <p class="muted">Escucha canciones, playlists o perfiles de SoundCloud aquí mismo, sin descargar nada. En SoundCloud pulsa <b>Compartir</b>, copia el enlace y pégalo aquí. Suena con el reproductor oficial de SoundCloud y sigue sonando mientras cambias de sección.</p>
+
+    <form asp-action="AddSoundCloud" method="post" class="sc-form">
+        <div>
+            <label for="scUrl">Enlace de SoundCloud</label>
+            <input id="scUrl" name="url" type="url" inputmode="url" maxlength="400" required
+                   placeholder="https://soundcloud.com/artista/cancion" />
+        </div>
+        <div>
+            <label for="scTitle">Nombre (opcional)</label>
+            <input id="scTitle" name="title" maxlength="120" placeholder="Ej: Lo-fi para estudiar" />
+        </div>
+        <button class="btn primary" type="submit">Guardar enlace</button>
+    </form>
+
+    @if (Model.SoundCloud.Any())
+    {
+        <div class="music-list sc-list">
+            @foreach (var sc in Model.SoundCloud)
+            {
+                <div class="music-track">
+                    <div class="grow">
+                        <strong>@sc.Title</strong>
+                        <small class="muted">@sc.KindText · @sc.Url.Replace("https://", "")</small>
+                    </div>
+                    <div class="item-actions">
+                        <button type="button" class="btn small primary" data-sc-play data-sc-url="@sc.Url" data-sc-title="@sc.Title" data-sc-kind="@sc.Kind">▶ Reproducir</button>
+                        <details class="rename">
+                            <summary>Renombrar</summary>
+                            <form asp-action="RenameSoundCloud" asp-route-id="@sc.Id" method="post" class="rename-form">
+                                <label class="visually-hidden" for="sc-@sc.Id">Nuevo nombre</label>
+                                <input id="sc-@sc.Id" name="title" value="@sc.Title" maxlength="120" required />
+                                <button class="btn small" type="submit">Guardar</button>
+                            </form>
+                        </details>
+                        <form asp-action="DeleteSoundCloud" asp-route-id="@sc.Id" method="post" data-confirm="¿Quitar «@sc.Title» de tu lista de SoundCloud?">
+                            <button class="danger-link" type="submit">Quitar</button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    <p class="muted small-text">Las canciones que el artista marcó solo para SoundCloud Go+ suenan como avance de 30 segundos, y algunos artistas no permiten reproducirlas fuera de SoundCloud.</p>
+</section>
+
+@if (Model.Playlists.Any())
+{
+    <section class="card music-card">
+        <h2>Mis listas</h2>
+        <div class="playlist-grid">
+            @foreach (var pl in Model.Playlists)
+            {
+                <article class="playlist">
+                    <div class="section-head">
+                        <h3>@pl.Playlist.Name</h3>
+                        <span class="muted">@pl.Items.Count canción(es)</span>
+                    </div>
+                    <div class="item-actions">
+                        @if (pl.Items.Any())
+                        {
+                            <button type="button" class="btn small primary" data-play-playlist="@pl.Playlist.Id">▶ Reproducir lista</button>
+                        }
+                        <details class="rename">
+                            <summary>Renombrar</summary>
+                            <form asp-action="RenamePlaylist" asp-route-id="@pl.Playlist.Id" method="post" class="rename-form">
+                                <label class="visually-hidden" for="pl-@pl.Playlist.Id">Nuevo nombre</label>
+                                <input id="pl-@pl.Playlist.Id" name="name" value="@pl.Playlist.Name" maxlength="60" required />
+                                <button class="btn small" type="submit">Guardar</button>
+                            </form>
+                        </details>
+                        <form asp-action="DeletePlaylist" asp-route-id="@pl.Playlist.Id" method="post" data-confirm="¿Eliminar la lista «@pl.Playlist.Name»? Las canciones siguen en tu biblioteca.">
+                            <button class="danger-link" type="submit">Eliminar lista</button>
+                        </form>
+                    </div>
+                    <ol class="playlist-items">
+                        @for (var i = 0; i < pl.Items.Count; i++)
+                        {
+                            var (item, song) = pl.Items[i];
+                            <li>
+                                <button type="button" class="link-button" data-play-song="@song.Id" data-playlist="@pl.Playlist.Id">@song.Title</button>
+                                <span class="item-actions">
+                                    <form asp-action="MoveInPlaylist" method="post"><input type="hidden" name="itemId" value="@item.Id" /><input type="hidden" name="direction" value="-1" /><button class="icon-btn" type="submit" aria-label="Subir @song.Title" disabled="@(i == 0)">↑</button></form>
+                                    <form asp-action="MoveInPlaylist" method="post"><input type="hidden" name="itemId" value="@item.Id" /><input type="hidden" name="direction" value="1" /><button class="icon-btn" type="submit" aria-label="Bajar @song.Title" disabled="@(i == pl.Items.Count - 1)">↓</button></form>
+                                    <form asp-action="RemoveFromPlaylist" method="post"><input type="hidden" name="itemId" value="@item.Id" /><button class="icon-btn" type="submit" aria-label="Quitar @song.Title de la lista">✕</button></form>
+                                </span>
+                            </li>
+                        }
+                    </ol>
+                    @if (!pl.Items.Any())
+                    {
+                        <p class="muted small-text">Lista vacía: usa «Agregar a lista» en tu biblioteca.</p>
+                    }
+                </article>
+            }
+        </div>
+    </section>
+}
+
+<section class="card music-card">
+    <div class="section-head">
+        <h2>Mi biblioteca</h2>
+        <span class="muted">@Model.Songs.Count canción(es)</span>
+    </div>
+    <p class="muted">Pulsa Reproducir y sigue navegando: la música continúa en el reproductor de arriba. Usa ⏮ ⏭ para cambiar de canción, 🔀 para orden aleatorio y 🔁 para repetir.</p>
+
+    @if (!Model.Songs.Any())
+    {
+        <div class="empty-state">
+            <p>Todavía no tienes canciones. Añade tu primer archivo arriba.</p>
+        </div>
+    }
+    else
+    {
+        <div class="music-list">
+            @foreach (var song in Model.Songs)
+            {
+                <div class="music-track">
+                    <div class="grow">
+                        <strong>@song.Title</strong>
+                        <small class="muted">@song.OriginalFileName · @Size(song.SizeBytes) · subida el @Format.Date(song.UploadedAt.ToLocalTime())</small>
+                    </div>
+                    <div class="item-actions">
+                        <button type="button" class="btn small primary" data-play-song="@song.Id">▶ Reproducir</button>
+                        @if (Model.Playlists.Any())
+                        {
+                            <form asp-action="AddToPlaylist" method="post" class="rename-form">
+                                <input type="hidden" name="songId" value="@song.Id" />
+                                <label class="visually-hidden" for="add-@song.Id">Lista</label>
+                                <select id="add-@song.Id" name="playlistId">
+                                    @foreach (var pl in Model.Playlists)
+                                    {
+                                        <option value="@pl.Playlist.Id">@pl.Playlist.Name</option>
+                                    }
+                                </select>
+                                <button class="btn small" type="submit">Agregar a lista</button>
+                            </form>
+                        }
+                        <details class="rename">
+                            <summary>Renombrar</summary>
+                            <form asp-action="Rename" asp-route-id="@song.Id" method="post" class="rename-form">
+                                <label class="visually-hidden" for="title-@song.Id">Nuevo nombre</label>
+                                <input id="title-@song.Id" name="title" value="@song.Title" maxlength="150" required />
+                                <button class="btn small" type="submit">Guardar</button>
+                            </form>
+                        </details>
+                        <form asp-action="Delete" asp-route-id="@song.Id" method="post" data-confirm="¿Eliminar «@song.Title» de tu biblioteca? El archivo se borra y sale de tus listas.">
+                            <button class="danger-link" type="submit">Eliminar</button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</section>

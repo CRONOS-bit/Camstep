@@ -1,0 +1,130 @@
+@model TaskListViewModel
+@{
+    ViewData["Title"] = "Tareas";
+    var currentUrl = Context.Request.Path + Context.Request.QueryString;
+}
+
+<div class="page-head">
+    <div>
+        <h1>Tareas</h1>
+        <p>
+            @Model.PendingCount pendiente(s) · @Model.CompletedCount completada(s)
+            @if (Model.OverdueCount > 0)
+            {
+                <span>· <a asp-action="Index" asp-route-status="overdue" class="badge overdue">@Model.OverdueCount vencida(s)</a></span>
+            }
+        </p>
+    </div>
+    <a class="btn primary" asp-action="Create" asp-route-returnUrl="@currentUrl">+ Nueva tarea</a>
+</div>
+
+<form class="card filters" method="get" asp-action="Index" role="search" aria-label="Filtrar tareas">
+    <div class="filter-field grow-2">
+        <label for="q">Buscar</label>
+        <input id="q" name="q" type="search" value="@Model.Q" placeholder="Título o descripción" />
+    </div>
+    <div class="filter-field">
+        <label for="status">Estado</label>
+        <select id="status" name="status">
+            <option value="all" selected="@(Model.Status == "all")">Todas</option>
+            <option value="pending" selected="@(Model.Status == "pending")">Pendientes</option>
+            <option value="completed" selected="@(Model.Status == "completed")">Completadas</option>
+            <option value="overdue" selected="@(Model.Status == "overdue")">Vencidas</option>
+        </select>
+    </div>
+    <div class="filter-field">
+        <label for="priority">Prioridad</label>
+        <select id="priority" name="priority">
+            <option value="all" selected="@(Model.Priority == "all")">Todas</option>
+            @foreach (var p in Priorities.All)
+            {
+                <option value="@p" selected="@(Model.Priority == p)">@p</option>
+            }
+        </select>
+    </div>
+    <div class="filter-field">
+        <label for="range">Periodo</label>
+        <select id="range" name="range">
+            <option value="all" selected="@(Model.Range == "all")">Cualquier fecha</option>
+            <option value="today" selected="@(Model.Range == "today")">Hoy</option>
+            <option value="week" selected="@(Model.Range == "week")">Esta semana</option>
+            <option value="month" selected="@(Model.Range == "month")">Este mes</option>
+        </select>
+    </div>
+    <div class="filter-field">
+        <label for="sort">Ordenar por</label>
+        <select id="sort" name="sort">
+            <option value="date" selected="@(Model.Sort == "date")">Fecha (próximas primero)</option>
+            <option value="date_desc" selected="@(Model.Sort == "date_desc")">Fecha (lejanas primero)</option>
+            <option value="priority" selected="@(Model.Sort == "priority")">Prioridad</option>
+        </select>
+    </div>
+    <div class="filter-actions">
+        <button class="btn primary" type="submit">Aplicar</button>
+        @if (Model.HasFilters || Model.Sort != "date")
+        {
+            <a class="btn" asp-action="Index">Limpiar</a>
+        }
+    </div>
+</form>
+
+<section class="card">
+    @foreach (var item in Model.Items)
+    {
+        var overdue = item.IsOverdue(Model.Today);
+        var soon = item.IsDueSoon(Model.Today);
+
+        <div class="task-row @(item.IsCompleted ? "done" : "")">
+            <form asp-action="Toggle" asp-route-id="@item.Id" method="post">
+                <input type="hidden" name="returnUrl" value="@currentUrl" />
+                <button class="check" type="submit"
+                        aria-label="@(item.IsCompleted ? "Marcar como pendiente" : "Marcar como completada")"
+                        title="@(item.IsCompleted ? "Marcar como pendiente" : "Marcar como completada")">@(item.IsCompleted ? "✓" : "")</button>
+            </form>
+            <div class="grow">
+                <strong>@item.Title</strong>
+                <small>
+                    @if (!string.IsNullOrWhiteSpace(item.Description))
+                    {
+                        <span>@item.Description ·</span>
+                    }
+                    @Format.Date(item.DueDate) ·
+                    <span class="priority priority-@item.Priority.ToLowerInvariant()">@item.Priority</span>
+                    @if (overdue)
+                    {
+                        <span class="badge overdue">Vencida</span>
+                    }
+                    else if (soon)
+                    {
+                        <span class="badge soon">@(item.DueDate.Date == Model.Today ? "Vence hoy" : "Próxima a vencer")</span>
+                    }
+                </small>
+            </div>
+            @if (!item.IsCompleted)
+            {
+                <a class="btn soft small focus-link" asp-controller="Focus" asp-action="Index" asp-route-taskId="@item.Id" title="Enfocarme en esta tarea">🌿 Enfocarme</a>
+            }
+            <a class="btn soft small" asp-action="Edit" asp-route-id="@item.Id" asp-route-returnUrl="@currentUrl">✎ Editar</a>
+            <form asp-action="Delete" asp-route-id="@item.Id" method="post" data-confirm="¿Eliminar la tarea «@item.Title»?">
+                <input type="hidden" name="returnUrl" value="@currentUrl" />
+                <button class="danger-link" type="submit">Eliminar</button>
+            </form>
+        </div>
+    }
+
+    @if (!Model.Items.Any())
+    {
+        <div class="empty-state">
+            @if (Model.TotalCount == 0)
+            {
+                <p>Todavía no tienes tareas.</p>
+                <a class="btn primary" asp-action="Create">Crear mi primera tarea</a>
+            }
+            else
+            {
+                <p>Ninguna tarea coincide con los filtros.</p>
+                <a class="btn" asp-action="Index">Ver todas</a>
+            }
+        </div>
+    }
+</section>

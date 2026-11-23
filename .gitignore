@@ -1,0 +1,14 @@
+bin/
+obj/
+.vs/
+*.user
+camstep.db
+camstep.db-wal
+camstep.db-shm
+vidaenorden.db
+vidaenorden.db-wal
+vidaenorden.db-shm
+App_Data/
+backups/
+publish/
+appsettings.Development.json

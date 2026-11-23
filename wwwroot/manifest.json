@@ -1,0 +1,70 @@
+{
+  "name": "CAMSTEP",
+  "short_name": "CAMSTEP",
+  "description": "Organiza tu vida. Avanza con calma.",
+  "lang": "es",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#E9F1EC",
+  "theme_color": "#1F2A37",
+  "icons": [
+    {
+      "src": "/img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/img/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "id": "/",
+  "scope": "/",
+  "orientation": "any",
+  "categories": [
+    "productivity",
+    "lifestyle"
+  ],
+  "shortcuts": [
+    {
+      "name": "Modo enfoque",
+      "short_name": "Enfoque",
+      "url": "/Focus",
+      "icons": [
+        {
+          "src": "/img/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Mis tareas",
+      "short_name": "Tareas",
+      "url": "/Tasks",
+      "icons": [
+        {
+          "src": "/img/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Mis hábitos",
+      "short_name": "Hábitos",
+      "url": "/Habits",
+      "icons": [
+        {
+          "src": "/img/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

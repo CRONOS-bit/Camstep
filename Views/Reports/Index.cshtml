@@ -1,0 +1,196 @@
+@model ReportViewModel
+@{
+    ViewData["Title"] = "Informes";
+    string D(DateTime d) => d.ToString("yyyy-MM-dd");
+    int? Change(decimal cur, decimal prev) => FinanceViewModel.ChangePercent(cur, prev);
+    string Arrow(int? c) => c == null ? "Sin datos del periodo anterior" : $"{(c >= 0 ? "▲" : "▼")} {Math.Abs(c.Value)}% vs. anterior";
+    var maxWeek = Math.Max(1, Model.WeeklyProductivity.Max(w => w.Completed));
+    var maxMonth = Math.Max(1, Model.MonthlyProductivity.Max(w => w.Completed));
+    var exportRoute = new Dictionary<string, string?>
+    {
+        ["period"] = Model.Period, ["date"] = D(Model.Anchor),
+        ["from"] = Model.Period == "custom" ? D(Model.From) : null, ["to"] = Model.Period == "custom" ? D(Model.To) : null
+    };
+}
+
+<div class="page-head">
+    <div>
+        <h1>Informes</h1>
+        <p>Resumen de tu actividad: <strong>@Model.Label</strong></p>
+    </div>
+    <div class="header-actions no-print">
+        <a class="btn" asp-action="Export" asp-all-route-data="exportRoute">⬇ Exportar a Excel (CSV)</a>
+        <button class="btn primary" type="button" data-print>🖨 Imprimir / guardar PDF</button>
+    </div>
+</div>
+
+<form class="card filters no-print" method="get" asp-action="Index" aria-label="Periodo del informe">
+    <div class="filter-field">
+        <label for="period">Periodo</label>
+        <select id="period" name="period">
+            <option value="week" selected="@(Model.Period == "week")">Semana</option>
+            <option value="month" selected="@(Model.Period == "month")">Mes</option>
+            <option value="year" selected="@(Model.Period == "year")">Año</option>
+            <option value="custom" selected="@(Model.Period == "custom")">Personalizado</option>
+        </select>
+    </div>
+    <div class="filter-field">
+        <label for="date">Fecha de referencia</label>
+        <input id="date" name="date" type="date" value="@D(Model.Anchor)" />
+    </div>
+    <div class="filter-field">
+        <label for="from">Desde <small class="muted">(personalizado)</small></label>
+        <input id="from" name="from" type="date" value="@(Model.Period == "custom" ? D(Model.From) : "")" />
+    </div>
+    <div class="filter-field">
+        <label for="to">Hasta <small class="muted">(personalizado)</small></label>
+        <input id="to" name="to" type="date" value="@(Model.Period == "custom" ? D(Model.To) : "")" />
+    </div>
+    <div class="filter-actions">
+        <button class="btn primary" type="submit">Ver informe</button>
+    </div>
+</form>
+
+<h2 class="report-title">Productividad</h2>
+<div class="stats">
+    <div class="stat"><small>Tareas del periodo</small><b>@Model.TasksDue</b><span class="change">@Model.EventsCount evento(s) en el calendario</span></div>
+    <div class="stat"><small>Completadas</small><b class="money-in">@Model.TasksCompleted</b><span class="change">Cumplimiento @Model.CompletionRate% (antes @Model.PrevCompletionRate%)</span></div>
+    <div class="stat"><small>Pendientes</small><b>@Model.TasksPending</b><span class="change">Con fecha que aún no pasa</span></div>
+    <div class="stat"><small>Vencidas</small><b class="@(Model.TasksOverdue > 0 ? "money-out" : "")">@Model.TasksOverdue</b><span class="change">Sin completar y ya pasó su fecha</span></div>
+</div>
+
+<div class="grid-2">
+    <section class="card">
+        <h3>Tareas completadas por semana</h3>
+        <div class="hbars" role="img" aria-label="Tareas completadas en las últimas 8 semanas">
+            @foreach (var (label, count) in Model.WeeklyProductivity)
+            {
+                <div class="hbar"><span class="hbar-label">@label</span><span class="hbar-track"><span style="width:@(count * 100 / maxWeek)%"></span></span><b>@count</b></div>
+            }
+        </div>
+    </section>
+    <section class="card">
+        <h3>Tareas completadas por mes</h3>
+        <div class="hbars" role="img" aria-label="Tareas completadas en los últimos 12 meses">
+            @foreach (var (label, count) in Model.MonthlyProductivity)
+            {
+                <div class="hbar"><span class="hbar-label">@label</span><span class="hbar-track"><span style="width:@(count * 100 / maxMonth)%"></span></span><b>@count</b></div>
+            }
+        </div>
+    </section>
+</div>
+
+<h2 class="report-title">Finanzas</h2>
+<div class="stats">
+    <div class="stat"><small>Ingresos</small><b class="money-in">@Format.Money(Model.Income)</b><span class="change">@Arrow(Change(Model.Income, Model.PrevIncome))</span></div>
+    <div class="stat"><small>Gastos</small><b class="money-out">@Format.Money(Model.Expense)</b><span class="change">@Arrow(Change(Model.Expense, Model.PrevExpense))</span></div>
+    <div class="stat"><small>Balance</small><b class="@(Model.Balance >= 0 ? "money-in" : "money-out")">@(Model.Balance < 0 ? "-" : "")@Format.Money(Math.Abs(Model.Balance))</b><span class="change">Periodo anterior: @Format.Money(Model.PrevIncome - Model.PrevExpense)</span></div>
+    <div class="stat"><small>Comparado con</small><b class="small-b">@Model.PrevLabel</b><span class="change">Periodo anterior de la misma duración</span></div>
+</div>
+
+<section class="card">
+    <h3>Distribución de gastos</h3>
+    @if (!Model.ExpenseByCategory.Any())
+    {
+        <p class="muted">No hay gastos en este periodo.</p>
+    }
+    else
+    {
+        <div class="stacked-bar" role="img" aria-label="Distribución de gastos por categoría">
+            @{ var palette = new[] { "#3563d9", "#16a34a", "#d97706", "#7c3aed", "#e5484d", "#0891b2", "#db2777", "#65a30d", "#64748b" }; var i = 0; }
+            @foreach (var c in Model.ExpenseByCategory)
+            {
+                <span style="width:@((c.Spent / Model.Expense * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%; background:@palette[i++ % palette.Length]" title="@c.Category"></span>
+            }
+        </div>
+        <table class="report-table">
+            <thead><tr><th>Categoría</th><th>Valor</th><th>%</th></tr></thead>
+            <tbody>
+                @{ i = 0; }
+                @foreach (var c in Model.ExpenseByCategory)
+                {
+                    <tr>
+                        <td><span class="legend-square" style="background:@palette[i++ % palette.Length]"></span>@c.Category</td>
+                        <td>@Format.Money(c.Spent)</td>
+                        <td>@Math.Round(c.Spent / Model.Expense * 100)%</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</section>
+
+<h2 class="report-title">Metas</h2>
+<section class="card">
+    <p>@Model.GoalsActive en curso · @Model.GoalsCompleted cumplida(s) · @Model.GoalsOverdue vencida(s)</p>
+    @if (!Model.Goals.Any())
+    {
+        <p class="muted">No tienes metas registradas.</p>
+    }
+    else
+    {
+        <table class="report-table">
+            <thead><tr><th>Meta</th><th>Categoría</th><th>Progreso</th><th>Fecha límite</th><th>Estado</th></tr></thead>
+            <tbody>
+                @foreach (var g in Model.Goals)
+                {
+                    <tr>
+                        <td>@g.Title</td>
+                        <td>@g.Category</td>
+                        <td><div class="progress mini"><span style="width:@g.Progress%"></span></div> @g.Progress%</td>
+                        <td>@Format.Date(g.Deadline)</td>
+                        <td>@(g.IsCompleted ? "Cumplida" : g.IsOverdue(DateTime.Today) ? "Vencida" : "En curso")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</section>
+
+<h2 class="report-title">Bienestar</h2>
+<section class="card">
+    <p>
+        @(Model.FocusMinutes > 0 ? $"{Model.FocusMinutes} minutos de enfoque en el periodo." : "Sin sesiones de enfoque en el periodo.")
+        @if (Model.MoodAverage is double avg)
+        {
+            <text> · Ánimo promedio de los últimos 30 días: @MoodEntry.EmojiFor((int)Math.Round(avg)) @MoodEntry.TextFor((int)Math.Round(avg)) (@avg.ToString("0.0", Format.Es) de 5).</text>
+        }
+    </p>
+    @if (!Model.MoodDays.Any())
+    {
+        <p class="muted">Aún no hay registros de ánimo. Anótalo en el inicio con una carita: toma un segundo.</p>
+    }
+    else
+    {
+        var byDay = Model.MoodDays.ToDictionary(m => m.Date.Date);
+        <div class="mood-chart" role="img" aria-label="Ánimo de los últimos 30 días">
+            @for (var d = Model.MoodFrom.Date; d <= Model.MoodTo.Date; d = d.AddDays(1))
+            {
+                if (byDay.TryGetValue(d, out var m))
+                {
+                    <div class="mood-col" title="@Format.Date(d): @MoodEntry.TextFor(m.Mood)@(string.IsNullOrEmpty(m.Note) ? "" : " · " + m.Note)">
+                        <span class="mood-bar mood-@m.Mood" style="height: @(m.Mood * 20)%"></span>
+                    </div>
+                }
+                else
+                {
+                    <div class="mood-col empty" title="@Format.Date(d): sin registro"><span class="mood-bar"></span></div>
+                }
+            }
+        </div>
+        <div class="mood-axis"><small>@Format.Date(Model.MoodFrom)</small><small>@Format.Date(Model.MoodTo)</small></div>
+        var notes = Model.MoodDays.Where(m => m.Note.Length > 0).OrderByDescending(m => m.Date).Take(8).ToList();
+        if (notes.Any())
+        {
+            <h3>Cosas buenas que anotaste</h3>
+            <ul class="simple-list">
+                @foreach (var n in notes)
+                {
+                    <li>@MoodEntry.EmojiFor(n.Mood) @n.Note <small class="muted">· @Format.Date(n.Date)</small></li>
+                }
+            </ul>
+        }
+    }
+</section>
+
+<p class="muted small-text print-only">Informe generado por CAMSTEP el @Format.LongDate(DateTime.Today).</p>

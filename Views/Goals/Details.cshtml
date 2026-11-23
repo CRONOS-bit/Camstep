@@ -1,0 +1,76 @@
+@model GoalDetailsViewModel
+@{
+    var goal = Model.Goal;
+    var status = goal.Status(Model.Today);
+    var done = Model.Steps.Count(s => s.IsDone);
+    ViewData["Title"] = goal.Title;
+}
+
+<div class="page-head">
+    <div>
+        <p><a class="btn soft small" asp-action="Index">← Volver a metas</a></p>
+        <h1>@goal.Title</h1>
+        <p class="goal-meta">
+            <span class="tag">@goal.Category</span>
+            <span class="badge @(status == "completed" ? "done" : status == "overdue" ? "overdue" : goal.DaysLeft(Model.Today) <= 7 ? "soon" : "neutral")">@goal.TimeLeftText(Model.Today)</span>
+            <span class="muted">Fecha límite: @Format.LongDate(goal.Deadline)</span>
+        </p>
+    </div>
+    <div class="header-actions">
+        <a class="btn" asp-action="Edit" asp-route-id="@goal.Id">Editar</a>
+        <form asp-action="Delete" asp-route-id="@goal.Id" method="post" data-confirm="¿Eliminar la meta «@goal.Title» y sus pasos?">
+            <button class="btn danger" type="submit">Eliminar</button>
+        </form>
+    </div>
+</div>
+
+<div class="grid-2">
+    <section class="card">
+        <div class="section-head"><h2>Progreso</h2><span class="percent">@goal.Progress%</span></div>
+        <div class="progress big @(status == "completed" ? "budget-ok" : "")" role="progressbar" aria-valuenow="@goal.Progress" aria-valuemin="0" aria-valuemax="100" aria-label="Progreso"><span style="width:@goal.Progress%"></span></div>
+        <p>@goal.Current.ToString("N0", Format.Es) de @goal.Target.ToString("N0", Format.Es)@(goal.IsCompleted ? "" : $" · faltan {(goal.Target - goal.Current).ToString("N0", Format.Es)}")</p>
+
+        <form asp-action="AddProgress" asp-route-id="@goal.Id" method="post" class="quick-progress">
+            <label for="amount">Sumar al progreso <small class="muted">(número negativo para restar)</small></label>
+            <div class="inline-fields">
+                <input id="amount" name="amount" type="number" step="0.01" required />
+                <button class="btn primary" type="submit">Actualizar</button>
+            </div>
+        </form>
+
+        @if (!string.IsNullOrWhiteSpace(goal.Description))
+        {
+            <h3 class="details-subtitle">Descripción</h3>
+            <p>@goal.Description</p>
+        }
+        @if (!string.IsNullOrWhiteSpace(goal.Notes))
+        {
+            <h3 class="details-subtitle">Notas</h3>
+            <p class="notes">@goal.Notes</p>
+        }
+    </section>
+
+    <section class="card">
+        <div class="section-head"><h2>Pasos</h2><span class="muted">@done de @Model.Steps.Count</span></div>
+        <p class="muted small-text">Divide la meta en acciones pequeñas y márcalas a medida que avances.</p>
+
+        @foreach (var step in Model.Steps)
+        {
+            <div class="task-row @(step.IsDone ? "done" : "")">
+                <form asp-action="ToggleStep" asp-route-stepId="@step.Id" method="post">
+                    <button class="check" type="submit" aria-label="@(step.IsDone ? "Marcar paso como pendiente" : "Marcar paso como hecho")">@(step.IsDone ? "✓" : "")</button>
+                </form>
+                <div class="grow"><strong>@step.Title</strong></div>
+                <form asp-action="DeleteStep" asp-route-stepId="@step.Id" method="post" data-confirm="¿Eliminar este paso?">
+                    <button class="danger-link" type="submit">Eliminar</button>
+                </form>
+            </div>
+        }
+
+        <form asp-action="AddStep" asp-route-id="@goal.Id" method="post" class="inline-fields add-step">
+            <label class="visually-hidden" for="stepTitle">Nuevo paso</label>
+            <input id="stepTitle" name="title" maxlength="150" placeholder="Nuevo paso, ej: Abrir cuenta de ahorros" required />
+            <button class="btn small primary" type="submit">Agregar</button>
+        </form>
+    </section>
+</div>

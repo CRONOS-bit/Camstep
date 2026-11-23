@@ -1,0 +1,229 @@
+@model HomeViewModel
+@{
+    ViewData["Title"] = "Inicio";
+    var maxDay = Math.Max(1, Model.Week.Max(d => Math.Max(d.Completed, d.Due)));
+    var maxCat = Model.TopCategories.Any() ? Model.TopCategories.Max(c => c.Spent) : 1m;
+    string Ago(DateTime due) => due.Date < Model.Today
+        ? $"Venció {Format.Date(due)}"
+        : due.Date == Model.Today ? "Hoy" : due.Date == Model.Today.AddDays(1) ? "Mañana" : Format.Date(due);
+}
+
+<section class="hero">
+    <span>PANEL PRINCIPAL</span>
+    <h1>@Model.Greeting, @Model.UserName 👋</h1>
+    <p>@Format.LongDate(Model.Today) · @(Model.TodayTasks == 0 ? "No tienes tareas pendientes para hoy." : $"Tienes {Model.TodayTasks} tarea(s) para hoy.")</p>
+</section>
+
+<nav class="quick-actions" aria-label="Accesos rápidos">
+    <a class="btn primary" asp-controller="Tasks" asp-action="Create" asp-route-returnUrl="/">+ Tarea</a>
+    <a class="btn" asp-controller="Events" asp-action="Create" asp-route-returnUrl="/">+ Evento</a>
+    <a class="btn" asp-controller="Expenses" asp-action="Create" asp-route-returnUrl="/">+ Gasto</a>
+    <a class="btn" asp-controller="Incomes" asp-action="Create" asp-route-returnUrl="/">+ Ingreso</a>
+    <a class="btn" asp-controller="Goals" asp-action="Create">+ Meta</a>
+</nav>
+
+@foreach (var alert in Model.Alerts)
+{
+    <p class="budget-alert" role="alert">⚠ @alert</p>
+}
+
+<div class="stats">
+    <a class="stat" asp-controller="Tasks" asp-action="Index" asp-route-status="pending">
+        <small>Tareas pendientes</small><b>@Model.PendingTasks</b>
+        <span class="change">@Model.CompletedTasks completada(s)@(Model.OverdueTasks > 0 ? $" · {Model.OverdueTasks} vencida(s)" : "")</span>
+    </a>
+    <a class="stat" asp-controller="Finance" asp-action="Index">
+        <small>Balance del mes</small>
+        <b class="@(Model.MonthBalance >= 0 ? "money-in" : "money-out")">@(Model.MonthBalance < 0 ? "-" : "")@Format.Money(Math.Abs(Model.MonthBalance))</b>
+        <span class="change">Ingresos @Format.Money(Model.MonthIncome)</span>
+    </a>
+    <a class="stat" asp-controller="Finance" asp-action="Index">
+        <small>Gastos del mes</small><b>@Format.Money(Model.MonthExpense)</b>
+        @if (Model.MonthlyBudget is > 0)
+        {
+            <div class="progress budget-@(Model.BudgetPercent > 100 ? "over" : Model.BudgetPercent >= 80 ? "warn" : "ok")"><span style="width:@Math.Min(100, Model.BudgetPercent)%"></span></div>
+            <span class="change">@Model.BudgetPercent% de @Format.Money(Model.MonthlyBudget.Value)</span>
+        }
+        else
+        {
+            <span class="change">Sin presupuesto definido</span>
+        }
+    </a>
+    <a class="stat" asp-controller="Goals" asp-action="Index">
+        <small>Metas en curso</small><b>@Model.ActiveGoals</b>
+        <span class="change">Progreso promedio @Model.AverageGoalProgress% · @Model.CompletedGoals cumplida(s)</span>
+    </a>
+</div>
+
+@if (Model.ReviewPending)
+{
+    <a class="review-banner" asp-controller="Review" asp-action="Index">🍃 <b>Es domingo de calma.</b> Tómate 5 minutos para mirar tu semana y elegir tus 3 pasos. →</a>
+}
+
+<section class="card today-path" aria-labelledby="todayPathTitle">
+    <div class="section-head">
+        <h2 id="todayPathTitle">Tu camino de hoy</h2>
+        <a class="btn small primary" asp-controller="Focus" asp-action="Index">🌿 Enfocarme</a>
+    </div>
+
+    <div class="today-grid">
+        <div class="today-block">
+            <h3>¿Cómo te sientes hoy?</h3>
+            <form asp-controller="Mood" asp-action="Save" method="post" class="mood-form">
+                <input type="hidden" name="returnUrl" value="/" />
+                <button type="submit" name="mood" value="@(Model.MoodToday?.Mood ?? 0)" class="visually-hidden" tabindex="-1" disabled="@(Model.MoodToday == null)">Guardar nota</button>
+                <div class="mood-faces" role="group" aria-label="Elige cómo te sientes">
+                    @foreach (var m in MoodEntry.Scale)
+                    {
+                        <button type="submit" name="mood" value="@m.Value" class="mood-face @(Model.MoodToday?.Mood == m.Value ? "on" : "")"
+                                title="@m.Text" aria-label="@m.Text" aria-pressed="@(Model.MoodToday?.Mood == m.Value ? "true" : "false")">@m.Emoji</button>
+                    }
+                </div>
+                <label class="visually-hidden" for="moodNote">Algo bueno de hoy</label>
+                <input id="moodNote" name="note" maxlength="200" value="@Model.MoodToday?.Note" placeholder="Algo bueno de hoy (opcional)" />
+            </form>
+        </div>
+
+        <div class="today-block">
+            <h3>Hábitos de hoy</h3>
+            @if (!Model.HabitsToday.Any())
+            {
+                <p class="muted small-text">Aún no tienes hábitos.</p>
+                <a class="btn soft small" asp-controller="Habits" asp-action="Index">🌱 Siembra el primero</a>
+            }
+            else
+            {
+                <div class="habit-chips">
+                    @foreach (var (habit, done) in Model.HabitsToday)
+                    {
+                        <form asp-controller="Habits" asp-action="Toggle" method="post">
+                            <input type="hidden" name="id" value="@habit.Id" />
+                            <input type="hidden" name="returnUrl" value="/" />
+                            <button type="submit" class="habit-chip @(done ? "on" : "")" aria-pressed="@(done ? "true" : "false")">
+                                @habit.Icon @habit.Name @(done ? "✓" : "")
+                            </button>
+                        </form>
+                    }
+                </div>
+            }
+        </div>
+
+        <a class="today-block today-link" asp-controller="Path" asp-action="Index">
+            <h3>Mi sendero</h3>
+            <p class="today-big">🐾 @Model.WeekFootprints <small>huella(s) esta semana</small></p>
+            <p class="muted small-text">@(Model.Streak > 0 ? $"{Model.Streak} día(s) seguidos caminando" : "Hoy puede ser tu primer paso")@(Model.FocusMinutesToday > 0 ? $" · {Model.FocusMinutesToday} min de enfoque hoy" : "")</p>
+        </a>
+    </div>
+</section>
+
+<div class="grid-2">
+    <section class="card">
+        <div class="section-head"><h2>Para estos días</h2><a class="btn small" asp-controller="Tasks" asp-action="Index">Ver tareas</a></div>
+        @foreach (var task in Model.DueSoonTasks)
+        {
+            <div class="list-item">
+                <div>
+                    <strong>@task.Title</strong>
+                    <small>
+                        <span class="@(task.IsOverdue(Model.Today) ? "badge overdue" : "")">@Ago(task.DueDate)</span>
+                        · <span class="priority priority-@task.Priority.ToLowerInvariant()">@task.Priority</span>
+                    </small>
+                </div>
+                <form asp-controller="Tasks" asp-action="Toggle" asp-route-id="@task.Id" method="post">
+                    <input type="hidden" name="returnUrl" value="/" />
+                    <button class="btn small" type="submit">Completar</button>
+                </form>
+            </div>
+        }
+        @if (!Model.DueSoonTasks.Any())
+        {
+            <p class="muted">Nada vence en los próximos 7 días. 🎉</p>
+        }
+
+        @if (Model.ImportantTasks.Any(t => !Model.DueSoonTasks.Contains(t)))
+        {
+            <h3 class="details-subtitle">Prioridad alta</h3>
+            @foreach (var task in Model.ImportantTasks.Where(t => !Model.DueSoonTasks.Contains(t)))
+            {
+                <div class="list-item">
+                    <div><strong>@task.Title</strong><small>@Format.Date(task.DueDate)</small></div>
+                    <a class="btn soft small" asp-controller="Tasks" asp-action="Edit" asp-route-id="@task.Id" asp-route-returnUrl="/">✎ Editar</a>
+                </div>
+            }
+        }
+    </section>
+
+    <section class="card">
+        <div class="section-head"><h2>Próximos eventos</h2><a class="btn small" asp-controller="Calendar" asp-action="Index">Calendario</a></div>
+        @foreach (var ev in Model.UpcomingEvents)
+        {
+            <div class="list-item event-item ev-border-@ev.Color">
+                <div>
+                    <strong>@ev.Title</strong>
+                    <small>@(ev.StartsAt.Date == Model.Today ? "Hoy" : ev.StartsAt.Date == Model.Today.AddDays(1) ? "Mañana" : Format.Date(ev.StartsAt)) · @(ev.AllDay ? "Todo el día" : Format.Time(ev.StartsAt))@(string.IsNullOrWhiteSpace(ev.Location) ? "" : " · " + ev.Location)</small>
+                </div>
+            </div>
+        }
+        @if (!Model.UpcomingEvents.Any())
+        {
+            <p class="muted">No tienes eventos en los próximos 7 días.</p>
+        }
+    </section>
+</div>
+
+<div class="grid-2">
+    <section class="card">
+        <div class="section-head">
+            <h2>Productividad (7 días)</h2>
+            <span class="chart-legend"><span class="dot in"></span>Completadas <span class="dot due"></span>Con fecha ese día</span>
+        </div>
+        <div class="week-chart" role="img" aria-label="Tareas completadas por día en los últimos 7 días: @string.Join(", ", Model.Week.Select(d => $"{d.Label} {d.Completed}"))">
+            @foreach (var d in Model.Week)
+            {
+                <div class="week-col">
+                    <div class="week-bars">
+                        <span class="bar-done" style="height:@(d.Completed * 100 / maxDay)%" title="@d.Completed completada(s)"></span>
+                        <span class="bar-due" style="height:@(d.Due * 100 / maxDay)%" title="@d.Due con fecha ese día"></span>
+                    </div>
+                    <small>@d.Label</small>
+                    <b>@d.Completed</b>
+                </div>
+            }
+        </div>
+        <p class="muted small-text">Completaste @Model.CompletedThisWeek tarea(s) en los últimos 7 días.</p>
+    </section>
+
+    <section class="card">
+        <div class="section-head"><h2>En qué se va el dinero</h2><span class="muted">@Format.MonthYear(Model.Today)</span></div>
+        @foreach (var c in Model.TopCategories)
+        {
+            <div class="cat-row">
+                <div class="cat-head"><span>@c.Category</span><span>@Format.Money(c.Spent)</span></div>
+                <div class="progress"><span style="width:@((int)Math.Round(c.Spent / maxCat * 100))%"></span></div>
+            </div>
+        }
+        @if (!Model.TopCategories.Any())
+        {
+            <p class="muted">No registraste gastos este mes.</p>
+        }
+    </section>
+</div>
+
+<section class="card">
+    <div class="section-head"><h2>Metas en curso</h2><a class="btn small" asp-controller="Goals" asp-action="Index">Ver metas</a></div>
+    <div class="goal-mini-grid">
+        @foreach (var goal in Model.Goals)
+        {
+            <a class="goal-mini" asp-controller="Goals" asp-action="Details" asp-route-id="@goal.Id">
+                <div class="section-head"><strong>@goal.Title</strong><span>@goal.Progress%</span></div>
+                <div class="progress"><span style="width:@goal.Progress%"></span></div>
+                <small class="muted">@goal.TimeLeftText(Model.Today)</small>
+            </a>
+        }
+    </div>
+    @if (!Model.Goals.Any())
+    {
+        <p class="muted">No tienes metas en curso.</p>
+        <a class="btn soft small" asp-controller="Goals" asp-action="Create">＋ Crear una meta</a>
+    }
+</section>

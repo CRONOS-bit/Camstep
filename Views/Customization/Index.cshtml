@@ -1,0 +1,185 @@
+@model UserPreference
+@{
+    ViewData["Title"] = "Personalización";
+    var current = Model.Theme;
+    var hasBackground = !string.IsNullOrWhiteSpace(Model.BackgroundFileName);
+    var themes = new[]
+    {
+        (Id: "Light", Name: "Claro", Description: "Limpio y luminoso"),
+        (Id: "Black", Name: "Black", Description: "Oscuro y minimalista"),
+        (Id: "Midnight", Name: "Midnight", Description: "Azul profundo"),
+        (Id: "Galaxy", Name: "Galaxy", Description: "Violeta espacial"),
+        (Id: "Ocean", Name: "Ocean", Description: "Azules tranquilos"),
+        (Id: "Nature", Name: "Nature", Description: "Verde natural")
+    };
+}
+<section class="page-head">
+    <div><p class="muted">TU ESPACIO</p><h1>Personalización</h1><p class="muted">Elige el ambiente visual de CAMSTEP. Se guarda en tu cuenta.</p></div>
+    <a class="btn" asp-controller="Home" asp-action="Index">Volver al inicio</a>
+</section>
+
+<div class="theme-grid">
+@foreach (var theme in themes)
+{
+    <article class="theme-card theme-preview-@theme.Id.ToLowerInvariant()">
+        <div class="theme-swatch"><span></span><span></span><span></span></div>
+        <h2>@theme.Name</h2><p>@theme.Description</p>
+        @if (current == theme.Id)
+        {
+            <span class="btn primary full" aria-current="true">Tema actual</span>
+        }
+        else
+        {
+            <form asp-action="Apply" method="post">
+                <input type="hidden" name="theme" value="@theme.Id" />
+                <button class="btn full" type="submit">Aplicar tema</button>
+            </form>
+        }
+    </article>
+}
+</div>
+
+<section class="card music-card">
+    <h2>Fondo de pantalla</h2>
+    <p class="muted">Por defecto, CAMSTEP muestra un ambiente animado de lluvia. Si quieres, puedes usar tu propia imagen; solo tú puedes verla.</p>
+
+    @if (hasBackground)
+    {
+        <p>Estás usando un fondo personalizado.</p>
+    }
+
+    <form asp-action="UploadBackground" method="post" enctype="multipart/form-data">
+        <label for="backgroundImage">Elige una imagen (JPG, PNG o WEBP, máximo 10 MB)</label>
+        <input id="backgroundImage" name="image" type="file" accept="image/jpeg,image/png,image/webp" required />
+        <button class="btn primary full" type="submit">@(hasBackground ? "Cambiar imagen" : "Usar esta imagen")</button>
+    </form>
+</section>
+
+<section class="card music-card">
+    <h2>Ajustes del fondo</h2>
+    <form asp-action="SaveAdjustments" method="post" id="bgAdjustForm">
+        @if (hasBackground)
+        {
+            <div class="range-field">
+                <label for="blur">Desenfoque <output id="blurOut">@Model.BackgroundBlur px</output></label>
+                <input id="blur" name="blur" type="range" min="0" max="20" step="1" value="@Model.BackgroundBlur" data-var="--bg-blur" data-unit="px" />
+            </div>
+            <div class="range-field">
+                <label for="zoom">Zoom <output id="zoomOut">@Model.BackgroundZoom %</output></label>
+                <input id="zoom" name="zoom" type="range" min="100" max="200" step="5" value="@Model.BackgroundZoom" data-var="--bg-scale" data-scale="true" data-unit="%" />
+            </div>
+            <div class="range-field">
+                <label for="positionX">Posición horizontal <output id="positionXOut">@Model.BackgroundPositionX %</output></label>
+                <input id="positionX" name="positionX" type="range" min="0" max="100" step="1" value="@Model.BackgroundPositionX" data-unit="%" />
+            </div>
+            <div class="range-field">
+                <label for="positionY">Posición vertical <output id="positionYOut">@Model.BackgroundPositionY %</output></label>
+                <input id="positionY" name="positionY" type="range" min="0" max="100" step="1" value="@Model.BackgroundPositionY" data-unit="%" />
+            </div>
+            <p class="muted small-text">Los cambios se ven al instante; pulsa Guardar para conservarlos.</p>
+        }
+        else
+        {
+            <input type="hidden" name="blur" value="0" />
+            <input type="hidden" name="zoom" value="100" />
+            <input type="hidden" name="positionX" value="50" />
+            <input type="hidden" name="positionY" value="50" />
+        }
+
+        <label class="inline">
+            <input type="checkbox" name="showRain" value="true" checked="@Model.ShowRain" />
+            Mostrar la lluvia ambiental
+        </label>
+        <input type="hidden" name="showRain" value="false" />
+
+        <button class="btn primary full" type="submit">Guardar ajustes</button>
+    </form>
+
+    @if (hasBackground)
+    {
+        <form asp-action="ResetBackground" method="post" data-confirm="¿Quitar tu imagen y volver al fondo de lluvia?">
+            <button class="btn full" type="submit">Restablecer fondo de lluvia</button>
+        </form>
+    }
+</section>
+
+<section class="card music-card" id="ambiente">
+    <h2>🌿 Música ambiente</h2>
+    <p class="muted">Una música tranquila de CAMSTEP que suena al iniciar sesión y te acompaña mientras usas la app. Si pones tus propias canciones en Mi música, el ambiente se pausa; con el botón 🌿 del reproductor vuelves a él.</p>
+    <form asp-action="SaveAmbient" method="post">
+        <label class="inline">
+            <input type="checkbox" name="ambientMusic" value="true" checked="@Model.AmbientMusic" />
+            Poner música ambiente al entrar
+        </label>
+        <input type="hidden" name="ambientMusic" value="false" />
+
+        <div class="range-field">
+            <label for="ambientVolume">Volumen del ambiente <output id="ambientVolumeOut">@Model.AmbientVolume %</output></label>
+            <input id="ambientVolume" name="ambientVolume" type="range" min="5" max="100" step="5" value="@Model.AmbientVolume" />
+        </div>
+        <p class="muted small-text">Algunos navegadores no dejan sonar música sola: en ese caso empieza con tu primer clic o toque en la página.</p>
+
+        <button class="btn primary full" type="submit">Guardar música ambiente</button>
+    </form>
+</section>
+
+<section class="card" id="frases">
+    <h2>💬 Frases del camino</h2>
+    <p class="muted">Cada 15 minutos aparece abajo una frase de motivación durante 10 segundos: autores clásicos, refranes y mensajes de CAMSTEP (@Quotes.Count en total). No se repiten hasta que las veas todas, y luego vuelven en otro orden.</p>
+    <form asp-action="SaveQuotes" method="post">
+        <label class="inline">
+            <input type="checkbox" name="showQuotes" value="true" checked="@Model.ShowQuotes" />
+            Mostrar frases del camino
+        </label>
+        <input type="hidden" name="showQuotes" value="false" />
+        <button class="btn full" type="submit">Guardar</button>
+    </form>
+</section>
+
+<section class="card" id="instalar">
+    <h2>📱 CAMSTEP en tu celular o computador</h2>
+    <p class="muted">Instálala como una app: queda con su ícono en la pantalla de inicio y se abre sin la barra del navegador.</p>
+    <button type="button" class="btn primary" id="installApp" hidden>Instalar CAMSTEP</button>
+    <p class="muted small-text" id="installStatus"></p>
+    <ul class="simple-list install-help">
+        <li><b>Android (Chrome):</b> menú ⋮ → <i>Instalar app</i> o <i>Agregar a la pantalla principal</i>.</li>
+        <li><b>iPhone (Safari):</b> botón Compartir ⬆ → <i>Agregar a inicio</i>.</li>
+        <li><b>Computador (Chrome o Edge):</b> el ícono de instalar ⊕ al final de la barra de direcciones.</li>
+    </ul>
+</section>
+
+@section Scripts {
+    <script>
+        (function () {
+            const body = document.body;
+            const ids = ["blur", "zoom", "positionX", "positionY"];
+            function apply() {
+                const get = function (id) { const el = document.getElementById(id); return el ? Number(el.value) : null; };
+                const blur = get("blur"), zoom = get("zoom"), x = get("positionX"), y = get("positionY");
+                if (blur === null) return;
+                body.style.setProperty("--bg-blur", blur + "px");
+                body.style.setProperty("--bg-scale", (zoom / 100).toString());
+                body.style.setProperty("--bg-pos", x + "% " + y + "%");
+                ids.forEach(function (id) {
+                    const out = document.getElementById(id + "Out");
+                    const input = document.getElementById(id);
+                    if (out && input) out.textContent = input.value + " " + input.dataset.unit;
+                });
+            }
+            ids.forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener("input", apply);
+            });
+            const rain = document.querySelector('input[name="showRain"][type="checkbox"]');
+            if (rain) rain.addEventListener("change", function () { body.classList.toggle("no-rain", !rain.checked); });
+
+            const vol = document.getElementById("ambientVolume");
+            const volOut = document.getElementById("ambientVolumeOut");
+            if (vol) vol.addEventListener("input", function () {
+                if (volOut) volOut.textContent = vol.value + " %";
+                const audio = document.getElementById("globalMusicAudio");
+                if (audio && audio.loop && audio.src.indexOf("camstep-ambiente") >= 0) audio.volume = Number(vol.value) / 100;
+            });
+        })();
+    </script>
+}

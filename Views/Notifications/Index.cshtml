@@ -1,0 +1,112 @@
+@model NotificationsViewModel
+@{
+    ViewData["Title"] = "Avisos";
+    var s = Model.Settings;
+    string Icon(string kind) => kind switch { "task" => "✓", "event" => "📅", "goal" => "🎯", "budget" => "💰", "review" => "🍃", _ => "🔔" };
+    string Ago(DateTime d)
+    {
+        var span = DateTime.Now - d;
+        if (span.TotalMinutes < 1) return "ahora";
+        if (span.TotalMinutes < 60) return $"hace {(int)span.TotalMinutes} min";
+        if (span.TotalHours < 24) return $"hace {(int)span.TotalHours} h";
+        return Format.Date(d);
+    }
+}
+
+<div class="page-head">
+    <div>
+        <h1>Avisos</h1>
+        <p>@(Model.UnreadCount == 0 ? "Estás al día." : $"Tienes {Model.UnreadCount} aviso(s) sin leer.")</p>
+    </div>
+    <div class="header-actions">
+        <form asp-action="MarkAllRead" method="post"><button class="btn" type="submit">Marcar todo como leído</button></form>
+        <form asp-action="DeleteRead" method="post" data-confirm="¿Eliminar todos los avisos leídos?"><button class="btn" type="submit">Borrar leídos</button></form>
+    </div>
+</div>
+
+<div class="grid-2 notif-layout">
+    <section class="card">
+        <div class="calendar-filter" role="group" aria-label="Filtrar avisos">
+            <a class="chip @(Model.Filter == "all" ? "active" : "")" asp-action="Index">Todos</a>
+            <a class="chip @(Model.Filter == "unread" ? "active" : "")" asp-action="Index" asp-route-filter="unread">Sin leer (@Model.UnreadCount)</a>
+        </div>
+
+        <ul class="notif-list">
+            @foreach (var n in Model.Items)
+            {
+                <li class="notif @(n.IsRead ? "read" : "unread") kind-@n.Kind">
+                    <span class="notif-icon" aria-hidden="true">@Icon(n.Kind)</span>
+                    <a class="notif-body" asp-action="Open" asp-route-id="@n.Id">
+                        <strong>@n.Title</strong>
+                        <span>@n.Message</span>
+                        <small>@Ago(n.CreatedAt)@(n.IsRead ? "" : " · nuevo")</small>
+                    </a>
+                    <div class="item-actions">
+                        @if (!n.IsRead)
+                        {
+                            <form asp-action="MarkRead" asp-route-id="@n.Id" method="post">
+                                <button class="btn small" type="submit" title="Marcar como leído">Leído</button>
+                            </form>
+                        }
+                        <form asp-action="Delete" asp-route-id="@n.Id" method="post">
+                            <button class="danger-link" type="submit" aria-label="Eliminar aviso">Eliminar</button>
+                        </form>
+                    </div>
+                </li>
+            }
+        </ul>
+
+        @if (!Model.Items.Any())
+        {
+            <div class="empty-state">
+                <p>@(Model.Filter == "unread" ? "No tienes avisos sin leer." : "Todavía no tienes avisos. Aquí aparecerán tus tareas por vencer, eventos próximos, metas y presupuestos.")</p>
+            </div>
+        }
+    </section>
+
+    <section class="card">
+        <h2>Configurar avisos</h2>
+        <form asp-action="SaveSettings" method="post">
+            <label class="inline"><input type="checkbox" name="notifyTasks" value="true" checked="@s.NotifyTasks" /> Tareas por vencer y vencidas</label>
+            <input type="hidden" name="notifyTasks" value="false" />
+            <label for="taskLeadDays">Avisarme de las tareas con</label>
+            <select id="taskLeadDays" name="taskLeadDays">
+                @foreach (var (v, t) in new[] { (0, "El mismo día"), (1, "1 día de anticipación"), (2, "2 días de anticipación"), (3, "3 días de anticipación"), (7, "1 semana de anticipación") })
+                {
+                    <option value="@v" selected="@(s.TaskLeadDays == v)">@t</option>
+                }
+            </select>
+
+            <label class="inline"><input type="checkbox" name="notifyEvents" value="true" checked="@s.NotifyEvents" /> Eventos del calendario</label>
+            <input type="hidden" name="notifyEvents" value="false" />
+            <label for="eventLeadMinutes">Anticipación predeterminada de los eventos</label>
+            <select id="eventLeadMinutes" name="eventLeadMinutes">
+                @foreach (var (v, t) in new[] { (10, "10 minutos antes"), (30, "30 minutos antes"), (60, "1 hora antes"), (180, "3 horas antes"), (1440, "1 día antes") })
+                {
+                    <option value="@v" selected="@(s.EventLeadMinutes == v)">@t</option>
+                }
+            </select>
+            <p class="muted small-text">Cada evento puede tener su propio recordatorio al crearlo o editarlo.</p>
+
+            <label class="inline"><input type="checkbox" name="notifyGoals" value="true" checked="@s.NotifyGoals" /> Metas cerca de su fecha límite</label>
+            <input type="hidden" name="notifyGoals" value="false" />
+            <label for="goalLeadDays">Avisarme de las metas con</label>
+            <select id="goalLeadDays" name="goalLeadDays">
+                @foreach (var (v, t) in new[] { (1, "1 día de anticipación"), (3, "3 días de anticipación"), (7, "1 semana de anticipación"), (14, "2 semanas de anticipación"), (30, "1 mes de anticipación") })
+                {
+                    <option value="@v" selected="@(s.GoalLeadDays == v)">@t</option>
+                }
+            </select>
+
+            <label class="inline"><input type="checkbox" name="notifyBudget" value="true" checked="@s.NotifyBudget" /> Presupuestos al 80% y superados</label>
+            <input type="hidden" name="notifyBudget" value="false" />
+
+            <button class="btn primary full" type="submit">Guardar configuración</button>
+        </form>
+
+        <h3 class="details-subtitle">Avisos del navegador</h3>
+        <p class="muted small-text">Muestra una ventanita del sistema cuando llegue un aviso nuevo mientras CAMSTEP está abierto (aunque estés en otra pestaña).</p>
+        <button class="btn full" type="button" id="enableBrowserNotifications">Activar avisos del navegador</button>
+        <p class="muted small-text" id="browserNotifStatus" role="status"></p>
+    </section>
+</div>

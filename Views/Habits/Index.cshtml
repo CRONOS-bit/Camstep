@@ -1,0 +1,94 @@
+@model HabitsViewModel
+@{
+    ViewData["Title"] = "Mis hábitos";
+    string Day(DateTime d) => d == Model.Today ? "Hoy" : Format.Capitalize(d.ToString("ddd", Format.Es).TrimEnd('.'));
+}
+
+<section class="page-head">
+    <div>
+        <p class="muted">CAMINO</p>
+        <h1>🌱 Mis hábitos</h1>
+        <p class="muted">Cada hábito es una planta: crece con cada día que lo cumples. Si un día fallas, no se marchita; solo ese día no crece.</p>
+    </div>
+</section>
+
+<section class="card">
+    <h2>Sembrar un hábito</h2>
+    <form asp-action="Create" method="post" class="habit-form">
+        <div>
+            <label for="habitName">Hábito</label>
+            <input id="habitName" name="name" maxlength="60" required placeholder="Ej: Leer 10 páginas" />
+        </div>
+        <fieldset class="habit-icons">
+            <legend>Ícono</legend>
+            @foreach (var icon in Habit.Icons)
+            {
+                <label><input type="radio" name="icon" value="@icon" checked="@(icon == "🌱")" /><span>@icon</span></label>
+            }
+        </fieldset>
+        <button class="btn primary" type="submit">Sembrar</button>
+    </form>
+</section>
+
+@if (!Model.Habits.Any())
+{
+    <div class="empty-state card">
+        <p>Todavía no tienes hábitos. Empieza con uno pequeño: tomar agua, leer un rato o caminar 10 minutos.</p>
+    </div>
+}
+else
+{
+    <div class="habit-grid">
+        @foreach (var h in Model.Habits)
+        {
+            var doneToday = h.Done.Contains(Model.Today);
+            <article class="card habit-card @(doneToday ? "done-today" : "")">
+                <div class="habit-plant" aria-hidden="true">
+                    <partial name="_Plant" model="h.Stage" />
+                </div>
+                <div class="habit-body">
+                    <h3><span aria-hidden="true">@h.Habit.Icon</span> @h.Habit.Name</h3>
+                    <p class="muted small-text"><b>@h.StageName</b> · @h.Total día(s) cumplido(s) · esta semana @h.WeekCount(Model.Days)/7</p>
+                    <p class="muted small-text">@h.NextText</p>
+
+                    <div class="habit-week" role="group" aria-label="Últimos 7 días de @h.Habit.Name">
+                        @foreach (var d in Model.Days)
+                        {
+                            var done = h.Done.Contains(d);
+                            <form asp-action="Toggle" method="post">
+                                <input type="hidden" name="id" value="@h.Habit.Id" />
+                                <input type="hidden" name="date" value="@d.ToString("yyyy-MM-dd")" />
+                                <button type="submit" class="habit-day @(done ? "on" : "") @(d == Model.Today ? "today" : "")"
+                                        aria-pressed="@(done ? "true" : "false")"
+                                        aria-label="@Day(d) @Format.Date(d): @(done ? "cumplido, quitar marca" : "marcar como cumplido")">
+                                    <small>@Day(d)</small><span>@(done ? "✓" : "")</span>
+                                </button>
+                            </form>
+                        }
+                    </div>
+
+                    <div class="item-actions">
+                        <details class="rename">
+                            <summary>Editar</summary>
+                            <form asp-action="Rename" asp-route-id="@h.Habit.Id" method="post" class="rename-form">
+                                <label class="visually-hidden" for="hn-@h.Habit.Id">Nombre</label>
+                                <input id="hn-@h.Habit.Id" name="name" value="@h.Habit.Name" maxlength="60" required />
+                                <label class="visually-hidden" for="hi-@h.Habit.Id">Ícono</label>
+                                <select id="hi-@h.Habit.Id" name="icon">
+                                    @foreach (var icon in Habit.Icons)
+                                    {
+                                        <option value="@icon" selected="@(icon == h.Habit.Icon)">@icon</option>
+                                    }
+                                </select>
+                                <button class="btn small" type="submit">Guardar</button>
+                            </form>
+                        </details>
+                        <form asp-action="Delete" asp-route-id="@h.Habit.Id" method="post" data-confirm="¿Quitar el hábito «@h.Habit.Name» y sus días cumplidos?">
+                            <button class="danger-link" type="submit">Quitar</button>
+                        </form>
+                    </div>
+                </div>
+            </article>
+        }
+    </div>
+}

@@ -1,0 +1,160 @@
+@model PathViewModel
+@functions {
+    private static Microsoft.AspNetCore.Html.IHtmlContent SvgText(double x, double y, string value, string? cls = null)
+    {
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        var tag = "te" + "xt";
+        var klass = cls == null ? "" : " class=\"" + cls + "\"";
+        return new Microsoft.AspNetCore.Html.HtmlString(
+            "<" + tag + klass + " x=\"" + x.ToString("0.#", inv) + "\" y=\"" + y.ToString("0.#", inv) + "\" text-anchor=\"middle\">"
+            + System.Net.WebUtility.HtmlEncode(value) + "</" + tag + ">");
+    }
+}
+@using System.Globalization
+@{
+    ViewData["Title"] = "Mi sendero";
+    var inv = CultureInfo.InvariantCulture;
+    string N(double v) => v.ToString("0.#", inv);
+    var count = Model.Footprints.Count;
+    var diff = count - Model.LastWeekCount;
+    var maxHist = Math.Max(1, Model.History.Max(h => h.Count));
+    string Color(string kind) => kind switch
+    {
+        "task" => "var(--path-task)", "step" => "var(--path-step)", "focus" => "var(--path-focus)",
+        "habit" => "var(--path-habit)", "review" => "var(--path-review)", _ => "var(--primary)"
+    };
+    var message = Model.Week == 0
+        ? count switch
+        {
+            0 => "Tu sendero de esta semana te espera. Un solo paso ya lo empieza.",
+            < 5 => "Ya empezaste a caminar. Paso a paso se llega lejos.",
+            < 15 => "¡Buen paso! Tu sendero ya se ve.",
+            < 30 => "¡Qué semana! Vas caminando con calma y con rumbo.",
+            _ => "¡Increíble! Tu mapache ya casi no te alcanza 🦝"
+        }
+        : count == 0 ? "Esa semana el sendero descansó. También es parte del camino." : $"Esa semana dejaste {count} huella(s).";
+}
+
+<section class="page-head">
+    <div>
+        <p class="muted">CAMINO</p>
+        <h1>Mi sendero</h1>
+        <p class="muted">Cada cosa que avanzas deja una huella: tareas terminadas, pasos de tus metas, sesiones de enfoque, hábitos cumplidos y tu domingo de calma.</p>
+    </div>
+    <div class="item-actions">
+        <a class="btn" asp-action="Index" asp-route-week="@(Model.Week - 1)">← Semana anterior</a>
+        @if (Model.Week < 0)
+        {
+            <a class="btn" asp-action="Index" asp-route-week="@(Model.Week + 1)">Semana siguiente →</a>
+        }
+    </div>
+</section>
+
+<section class="card path-card">
+    <div class="section-head">
+        <h2>Semana del @Weeks.Range(Model.Monday)@(Model.Week == 0 ? " (esta semana)" : "")</h2>
+        <span class="path-count"><b>@count</b> huella(s)</span>
+    </div>
+    <p class="path-message">@message</p>
+
+    <div class="path-scroll">
+        <svg class="path-svg" viewBox="0 0 @PathViewModel.Width @PathViewModel.Height" role="img"
+             aria-label="Sendero de la semana con @count huellas">
+            <path class="path-road" d="@Model.PathD" />
+            <path class="path-dash" d="@Model.PathD" />
+
+            @foreach (var d in Model.DayMarks)
+            {
+                <g class="path-day @(d.IsToday ? "today" : "") @(d.IsFuture ? "future" : "")">
+                    @SvgText(d.X, d.Y + 62, d.Label)
+                    @if (d.Count > Model.MaxPerDay)
+                    {
+                        @SvgText(d.X, d.Y - 40, "+" + (d.Count - Model.MaxPerDay), "path-more")
+                    }
+                </g>
+            }
+
+            @for (var i = 0; i < Model.Prints.Count; i++)
+            {
+                var p = Model.Prints[i];
+                <g class="paw" transform="translate(@N(p.X) @N(p.Y)) rotate(@N(p.Angle)) scale(1.25)" style="--d: @(i * 60)ms; color: @Color(p.Print.Kind)">
+                    <title>@p.Print.KindText: @p.Print.Title (@p.Print.When.ToString("ddd d, HH:mm", Format.Es))</title>
+                    <g transform="@(p.Left ? "scale(-1 1)" : "")">
+                        <ellipse cx="0" cy="2" rx="5.2" ry="4.4" />
+                        <circle cx="-5" cy="-4.5" r="1.8" /><circle cx="-1.7" cy="-6.6" r="1.8" />
+                        <circle cx="1.9" cy="-6.6" r="1.8" /><circle cx="5.1" cy="-4.4" r="1.8" />
+                    </g>
+                </g>
+            }
+
+            <g transform="translate(@N(Model.Raccoon.X - 28) @N(Model.Raccoon.Y - 62))">
+                <g class="path-raccoon">
+                    <svg width="56" height="56" viewBox="0 0 120 120"><use href="#camstep-logo-symbol" /></svg>
+                </g>
+            </g>
+        </svg>
+    </div>
+
+    <ul class="path-legend" aria-label="Tipos de huella">
+        <li><span style="background: var(--path-task)"></span>Tareas</li>
+        <li><span style="background: var(--path-step)"></span>Pasos de metas</li>
+        <li><span style="background: var(--path-focus)"></span>Enfoque</li>
+        <li><span style="background: var(--path-habit)"></span>Hábitos</li>
+        <li><span style="background: var(--path-review)"></span>Domingo de calma</li>
+    </ul>
+</section>
+
+<div class="stats">
+    <div class="stat"><small>Huellas esta semana</small><b>@count</b>
+        <span class="change">@(Model.Week == 0 ? (diff >= 0 ? $"{diff} más que la semana pasada" : $"{-diff} menos que la semana pasada · y está bien") : $"La anterior: {Model.LastWeekCount}")</span></div>
+    <div class="stat"><small>Días caminando</small><b>@Model.DaysWalked / 7</b><span class="change">Días con al menos una huella</span></div>
+    <div class="stat"><small>Días seguidos</small><b>@Model.Streak</b><span class="change">@(Model.Streak == 0 ? "Hoy puede ser el primero" : "Sin castigo si descansas: el sendero te espera")</span></div>
+</div>
+
+<div class="grid-2">
+    <section class="card">
+        <h2>Huellas de la semana</h2>
+        @if (count == 0)
+        {
+            <div class="empty-state">
+                <p>Aún no hay huellas. Termina una tarea, cumple un hábito o haz una sesión de enfoque.</p>
+                <div class="item-actions">
+                    <a class="btn primary" asp-controller="Focus" asp-action="Index">🌿 Enfocarme</a>
+                    <a class="btn" asp-controller="Habits" asp-action="Index">🌱 Mis hábitos</a>
+                </div>
+            </div>
+        }
+        else
+        {
+            <ol class="path-list">
+                @foreach (var group in Model.Footprints.GroupBy(f => f.When.Date).OrderByDescending(g => g.Key))
+                {
+                    <li>
+                        <h3>@Format.Capitalize(group.Key.ToString("dddd d 'de' MMMM", Format.Es))</h3>
+                        <ul>
+                            @foreach (var f in group.OrderByDescending(f => f.When))
+                            {
+                                <li><span class="path-dot" style="background: @Color(f.Kind)" aria-hidden="true"></span><span class="muted">@f.KindText:</span> @f.Title</li>
+                            }
+                        </ul>
+                    </li>
+                }
+            </ol>
+        }
+    </section>
+
+    <section class="card">
+        <h2>Últimas 8 semanas</h2>
+        <div class="path-history" role="img" aria-label="Huellas por semana en las últimas 8 semanas">
+            @foreach (var h in Model.History)
+            {
+                <div class="path-bar @(h.Monday == Model.Monday ? "current" : "")">
+                    <b>@h.Count</b>
+                    <span style="height: @(Math.Max(4, h.Count * 100 / maxHist))%"></span>
+                    <small>@h.Monday.ToString("d MMM", Format.Es).TrimEnd('.')</small>
+                </div>
+            }
+        </div>
+        <p class="muted small-text">El sendero no castiga: si una semana caminas menos, la siguiente sigue esperándote.</p>
+    </section>
+</div>

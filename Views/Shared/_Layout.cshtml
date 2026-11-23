@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+@{
+    var session = Context.Session;
+    var userId = session.GetInt32("UserId");
+    var isAuthPage = ViewData["AuthPage"] is true;
+    var theme = (session.GetString(PreferenceSession.Theme) ?? "Light").ToLowerInvariant();
+    var background = session.GetString(PreferenceSession.BackgroundImage);
+    var hasBackground = !string.IsNullOrWhiteSpace(background) && !isAuthPage;
+    var showRain = (session.GetInt32(PreferenceSession.ShowRain) ?? 1) == 1;
+
+    var ambientOn = (session.GetInt32(PreferenceSession.AmbientMusic) ?? 1) == 1;
+    var ambientVolume = session.GetInt32(PreferenceSession.AmbientVolume) ?? 35;
+    var showQuotes = (session.GetInt32(PreferenceSession.ShowQuotes) ?? 1) == 1;
+
+    var justEntered = TempData["Intro"] != null;
+
+    var bodyClasses = isAuthPage
+        ? "theme-light auth-page"
+        : $"theme-{theme} {(hasBackground ? "custom-background" : "rain-enabled")} {(showRain ? "" : "no-rain")}";
+
+    var bodyStyle = "";
+    if (hasBackground)
+    {
+        var blur = session.GetInt32(PreferenceSession.BgBlur) ?? 0;
+        var zoom = session.GetInt32(PreferenceSession.BgZoom) ?? 100;
+        var posX = session.GetInt32(PreferenceSession.BgPosX) ?? 50;
+        var posY = session.GetInt32(PreferenceSession.BgPosY) ?? 50;
+        bodyStyle = $"--custom-bg: url('{background}'); --bg-blur: {blur}px; --bg-scale: {(zoom / 100.0).ToString(System.Globalization.CultureInfo.InvariantCulture)}; --bg-pos: {posX}% {posY}%;";
+    }
+
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    string Active(string name) => controller == name ? "active" : "";
+    var moreActive = new[] { "Review", "Reports", "Music", "Customization", "About" }.Contains(controller);
+}
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="CAMSTEP: organiza tu vida. Avanza con calma." />
+    <meta name="theme-color" content="#1F2A37" />
+
+    <title>@ViewData["Title"] - CAMSTEP</title>
+    <link rel="icon" href="~/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate icon" href="~/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="apple-touch-icon" href="~/img/apple-touch-icon.png" />
+    <link rel="manifest" href="~/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="CAMSTEP" />
+
+    <link rel="stylesheet"
+          href="~/css/site.css"
+          asp-append-version="true" />
+
+    <script>
+        (function () {
+            try {
+                var root = document.documentElement;
+                var force = @(justEntered ? "true" : "false");
+                if (force || !sessionStorage.getItem("camstep:intro")) {
+                    root.classList.add("intro-on");
+                    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) root.classList.add("intro-reduced");
+                    sessionStorage.setItem("camstep:intro", "1");
+                }
+            } catch (e) { }
+        })();
+    </script>
+</head>
+
+<body class="@bodyClasses" style="@bodyStyle" data-quotes="@(userId != null && showQuotes ? "1" : "0")">
+
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true" focusable="false">
+        <symbol id="camstep-logo-symbol" viewBox="0 0 120 120"><g class="logo-sprout"><path d="M60 31 C59 22 64 14 73 11 C73 20 68 27 60 31 Z" fill="#7FB59A"/><path d="M60 31 C58 24 53 20 47 19 C48 26 53 30 60 31 Z" fill="#A9CDB8"/></g><g class="logo-head"><path d="M27 50 L30 17 L54 35 Z" fill="#6B7A8A" stroke="#6B7A8A" stroke-width="6" stroke-linejoin="round"/><path d="M93 50 L90 17 L66 35 Z" fill="#6B7A8A" stroke="#6B7A8A" stroke-width="6" stroke-linejoin="round"/><path d="M33 41 L34 26 L45 35 Z" fill="#E8E2D6"/><path d="M87 41 L86 26 L75 35 Z" fill="#E8E2D6"/><path d="M18 70 C18 46 37 32 60 32 C83 32 102 46 102 70 C102 93 83 106 60 106 C37 106 18 93 18 70 Z" fill="#6B7A8A"/><ellipse cx="60" cy="86" rx="27" ry="18" fill="#F4F1EA"/><path class="logo-mask" d="M19 64 C31 56 44 67 60 61 C75 55 87 52 101 57 L101 71 C88 66 75 70 61 75 C45 81 32 71 19 77 Z" fill="#1F2A37"/><circle class="logo-eye" cx="43" cy="67" r="4.2" fill="#FFFFFF"/><circle class="logo-eye" cx="77" cy="62.5" r="4.2" fill="#FFFFFF"/><ellipse cx="60" cy="86" rx="6" ry="4.2" fill="#1F2A37"/></g></symbol>
+    </svg>
+
+    <div class="intro" id="intro" aria-hidden="true">
+        <div class="intro-logo"><partial name="_Logo" model="@("")" /></div>
+        <div class="intro-name">
+            @{ var letters = "CAMSTEP"; }
+            @for (var i = 0; i < letters.Length; i++)
+            {
+                <span style="--i: @i">@letters[i]</span>
+            }
+        </div>
+        <div class="intro-tag">Organiza tu vida. Avanza con calma.</div>
+    </div>
+
+    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
+    <header class="topbar">
+        <a class="brand"
+           asp-controller="Home"
+           asp-action="Index"
+           aria-label="CAMSTEP, ir al inicio">
+            <partial name="_Logo" model="@("brand-logo")" />
+            <span class="brand-name">CAMSTEP</span>
+        </a>
+
+        @if (userId != null)
+        {
+            <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mainNav">
+                <span aria-hidden="true">☰</span> Menú
+            </button>
+
+            <form class="top-search" method="get" action="/Search" role="search">
+                <label class="visually-hidden" for="topSearch">Buscar en CAMSTEP</label>
+                <input id="topSearch" name="q" type="search" placeholder="Buscar…" minlength="2" maxlength="100" />
+            </form>
+
+            <nav id="mainNav" aria-label="Menú principal">
+                <a class="@Active("Home")" asp-controller="Home" asp-action="Index">Inicio</a>
+                <a class="@Active("Tasks")" asp-controller="Tasks" asp-action="Index">Tareas</a>
+                <a class="@(Active("Calendar"))@(Active("Events"))" asp-controller="Calendar" asp-action="Index">Calendario</a>
+                <a class="@(Active("Finance"))@(Active("Expenses"))@(Active("Incomes"))" asp-controller="Finance" asp-action="Index">Finanzas</a>
+                <a class="@Active("Goals")" asp-controller="Goals" asp-action="Index">Metas</a>
+                <a class="@Active("Habits")" asp-controller="Habits" asp-action="Index">Hábitos</a>
+                <a class="@Active("Focus")" asp-controller="Focus" asp-action="Index">Enfoque</a>
+                <a class="@Active("Path")" asp-controller="Path" asp-action="Index">Sendero</a>
+                <details class="nav-more @(moreActive ? "active" : "")">
+                    <summary>Más</summary>
+                    <div class="nav-more-menu">
+                        <a class="@Active("Review")" asp-controller="Review" asp-action="Index">🍃 Domingo de calma</a>
+                        <a class="@Active("Reports")" asp-controller="Reports" asp-action="Index">Informes</a>
+                        <a class="@Active("Music")" asp-controller="Music" asp-action="Index">Música</a>
+                        <a class="@Active("Customization")" asp-controller="Customization" asp-action="Index">Personalizar</a>
+                        <a class="@Active("About")" asp-controller="About" asp-action="Index">Acerca de</a>
+                    </div>
+                </details>
+                @await Component.InvokeAsync("NotificationBell")
+                <a class="@Active("Profile")" asp-controller="Profile" asp-action="Index" title="Mi perfil">👤 @session.GetString("UserName")</a>
+                <form asp-controller="Account" asp-action="Logout" method="post" class="logout-form">
+                    <button type="submit" class="nav-button">Salir</button>
+                </form>
+            </nav>
+        }
+        else if (!isAuthPage)
+        {
+            <nav aria-label="Menú">
+                <a asp-controller="Account" asp-action="Login">Iniciar sesión</a>
+                <a asp-controller="Account" asp-action="Register">Crear cuenta</a>
+            </nav>
+        }
+    </header>
+
+    <div class="nav-trail" aria-hidden="true"></div>
+
+    @if (isAuthPage)
+    {
+        <partial name="_AuthBackground" />
+    }
+    else
+    {
+        <div class="rain-layer" aria-hidden="true"></div>
+    }
+
+    @if (userId != null)
+    {
+        <aside class="global-music" aria-label="Reproductor de música" data-user="@userId"
+               data-library-url="@Url.Action("Library", "Music")"
+               data-ambient="@(ambientOn ? "1" : "0")"
+               data-ambient-volume="@ambientVolume"
+               data-ambient-url="@Url.Content("~/audio/camstep-ambiente.mp3")"
+               data-just-entered="@(justEntered ? "1" : "0")">
+            <span class="music-icon" aria-hidden="true">♫</span>
+
+            <span id="globalMusicName" class="music-name">
+                Ambiente de CAMSTEP
+            </span>
+
+            <div class="music-buttons">
+                <button type="button" class="player-btn" id="playerAmbient" title="Música ambiente de CAMSTEP" aria-label="Poner la música ambiente de CAMSTEP">🌿</button>
+                <button type="button" class="player-btn" id="playerPrev" title="Anterior" aria-label="Canción anterior">⏮</button>
+                <button type="button" class="player-btn" id="playerNext" title="Siguiente" aria-label="Canción siguiente">⏭</button>
+                <button type="button" class="player-btn" id="playerShuffle" title="Aleatorio: desactivado" aria-label="Orden aleatorio" aria-pressed="false">🔀</button>
+                <button type="button" class="player-btn" id="playerRepeat" title="Repetir: desactivado" aria-label="Repetir" aria-pressed="false">🔁</button>
+            </div>
+
+            <audio id="globalMusicAudio"
+                   controls
+                   preload="metadata">
+            </audio>
+
+            <div class="sc-slot" id="scSlot" hidden>
+                <div class="sc-slot-head">
+                    <span><span aria-hidden="true">☁</span> SoundCloud</span>
+                    <button type="button" class="player-btn" id="scToggle" title="Ocultar el reproductor de SoundCloud" aria-label="Ocultar el reproductor de SoundCloud" aria-expanded="true">▾</button>
+                    <button type="button" class="player-btn" id="scClose" title="Cerrar SoundCloud" aria-label="Cerrar SoundCloud">✕</button>
+                </div>
+                <div class="sc-frame" id="scFrame"></div>
+            </div>
+        </aside>
+    }
+
+    <main class="container page-enter@(isAuthPage ? " auth-main" : "")" id="contenido">
+        @if (TempData["Notice"] is string notice)
+        {
+            <p class="notice" role="status">@notice</p>
+        }
+        @if (TempData["Error"] is string error)
+        {
+            <p class="error" role="alert">@error</p>
+        }
+
+        @if (isAuthPage)
+        {
+            <div class="auth-shell">
+                <div class="auth-brand">
+                    <div class="auth-logo"><partial name="_Logo" model="@("")" /></div>
+                    <div class="auth-wordmark">CAMSTEP</div>
+                    <p>Organiza tu vida. Avanza con calma.</p>
+                </div>
+                <div class="auth-form-side">
+                    @RenderBody()
+                </div>
+            </div>
+        }
+        else
+        {
+            @RenderBody()
+        }
+    </main>
+
+    @if (userId != null)
+    {
+        <div class="quote-toast" id="quoteToast" role="status" aria-live="polite" hidden>
+            <div class="quote-logo" aria-hidden="true"><svg viewBox="0 0 120 120"><use href="#camstep-logo-symbol" /></svg></div>
+            <div class="quote-body">
+                <small>Frase del camino</small>
+                <p id="quoteText"></p>
+                <span id="quoteAuthor"></span>
+            </div>
+            <button type="button" class="quote-close" id="quoteClose" aria-label="Cerrar la frase">✕</button>
+            <span class="quote-progress" aria-hidden="true"></span>
+        </div>
+
+        <a class="focus-pill" id="focusPill" href="/Focus" hidden>🌿 <span id="focusPillTime">25:00</span></a>
+    }
+
+    <footer>
+        CAMSTEP · Organiza tu vida. Avanza con calma. ·
+        <a asp-controller="About" asp-action="Index">Acerca de nosotros</a>
+    </footer>
+
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @if (userId != null)
+    {
+        <script src="~/js/player.js" asp-append-version="true"></script>
+        <script src="~/js/notifications.js" asp-append-version="true"></script>
+        <script src="~/js/focus.js" asp-append-version="true"></script>
+        <script src="~/js/quotes.js" asp-append-version="true"></script>
+        <script src="~/js/softnav.js" asp-append-version="true"></script>
+    }
+
+    <div id="page-scripts">
+        @await RenderSectionAsync("Scripts", required: false)
+    </div>
+
+</body>
+</html>

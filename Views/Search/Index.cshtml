@@ -1,0 +1,108 @@
+@model SearchViewModel
+@{
+    ViewData["Title"] = Model.Q.Length > 0 ? $"Buscar: {Model.Q}" : "Buscar";
+    string D(DateTime? d) => d?.ToString("yyyy-MM-dd") ?? "";
+}
+
+<div class="page-head">
+    <div>
+        <h1>Buscar</h1>
+        <p>Busca en tus tareas, eventos, gastos, ingresos, metas y canciones.</p>
+    </div>
+</div>
+
+<form class="card filters" method="get" asp-action="Index" role="search" aria-label="Buscador general">
+    <div class="filter-field grow-2">
+        <label for="q">¿Qué buscas?</label>
+        <input id="q" name="q" type="search" value="@Model.Q" minlength="2" maxlength="100" placeholder="Ej: mercado, cita, ahorro…" autofocus />
+    </div>
+    <input type="hidden" name="type" value="@Model.Type" />
+    <div class="filter-field">
+        <label for="from">Desde</label>
+        <input id="from" name="from" type="date" value="@D(Model.From)" />
+    </div>
+    <div class="filter-field">
+        <label for="to">Hasta</label>
+        <input id="to" name="to" type="date" value="@D(Model.To)" />
+    </div>
+    <div class="filter-field">
+        <label for="sort">Ordenar</label>
+        <select id="sort" name="sort">
+            <option value="relevance" selected="@(Model.Sort == "relevance")">Más relevantes</option>
+            <option value="date_desc" selected="@(Model.Sort == "date_desc")">Más recientes</option>
+            <option value="date_asc" selected="@(Model.Sort == "date_asc")">Más antiguos</option>
+        </select>
+    </div>
+    <div class="filter-actions">
+        <button class="btn primary" type="submit">Buscar</button>
+    </div>
+</form>
+
+@if (ViewBag.Hint is string hint)
+{
+    <p class="muted">@hint</p>
+}
+
+@if (Model.Q.Length >= 2)
+{
+    <div class="calendar-filter search-types" role="group" aria-label="Tipo de resultado">
+        @foreach (var (id, name) in Camstep.Controllers.SearchController.Types)
+        {
+            var count = id == "all" ? Model.CountByType.Values.Sum() : Model.CountByType.GetValueOrDefault(id);
+            <a class="chip @(Model.Type == id ? "active" : "")" asp-action="Index" asp-all-route-data="@(new Dictionary<string, string?>
+               {
+                   ["q"] = Model.Q, ["type"] = id, ["from"] = D(Model.From), ["to"] = D(Model.To), ["sort"] = Model.Sort == "relevance" ? null : Model.Sort
+               })">@name (@count)</a>
+        }
+    </div>
+
+    <section class="card">
+        <p class="muted small-text">@Model.Total resultado(s) para «@Model.Q»@(Model.TotalPages > 1 ? $" · página {Model.Page} de {Model.TotalPages}" : "")</p>
+
+        @foreach (var r in Model.Results)
+        {
+            <a class="search-result kind-@r.Kind" href="@r.Url">
+                <span class="tag">@r.KindLabel</span>
+                <span class="grow">
+                    <strong>@r.Title</strong>
+                    <small>@(r.Date != null ? Format.Date(r.Date.Value) + " · " : "")@r.Detail</small>
+                </span>
+            </a>
+        }
+
+        @if (Model.Total == 0)
+        {
+            <div class="empty-state">
+                <p>No encontramos nada con «@Model.Q»@(Model.From != null || Model.To != null || Model.Type != "all" ? " con estos filtros" : "").</p>
+                <p class="small-text">Prueba con otra palabra, quita los filtros o revisa la ortografía.</p>
+            </div>
+        }
+
+        @if (Model.TotalPages > 1)
+        {
+            <nav class="pagination" aria-label="Páginas de resultados">
+                @if (Model.Page > 1)
+                {
+                    <a class="btn small" asp-action="Index" asp-all-route-data="@Pager(Model.Page - 1)">‹ Anterior</a>
+                }
+                <span>Página @Model.Page de @Model.TotalPages</span>
+                @if (Model.Page < Model.TotalPages)
+                {
+                    <a class="btn small" asp-action="Index" asp-all-route-data="@Pager(Model.Page + 1)">Siguiente ›</a>
+                }
+            </nav>
+        }
+    </section>
+}
+
+@functions {
+    Dictionary<string, string?> Pager(int page) => new()
+    {
+        ["q"] = Model.Q,
+        ["type"] = Model.Type == "all" ? null : Model.Type,
+        ["from"] = Model.From?.ToString("yyyy-MM-dd"),
+        ["to"] = Model.To?.ToString("yyyy-MM-dd"),
+        ["sort"] = Model.Sort == "relevance" ? null : Model.Sort,
+        ["page"] = page.ToString()
+    };
+}

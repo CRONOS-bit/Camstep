@@ -1,0 +1,70 @@
+@model BudgetsViewModel
+@{
+    ViewData["Title"] = "Presupuestos y categorías";
+    string V(decimal? v) => v?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) ?? "";
+}
+
+<div class="page-head">
+    <div>
+        <h1>Presupuestos y categorías</h1>
+        <p>Los presupuestos se aplican a cada mes. Deja un campo vacío si no quieres límite.</p>
+    </div>
+    <a class="btn" asp-action="Index">Volver a Finanzas</a>
+</div>
+
+<section class="card">
+    <h2>Presupuesto mensual</h2>
+    <form asp-action="SaveBudgets" method="post">
+        <label for="general">Límite total de gastos del mes (pesos)</label>
+        <input id="general" name="general" type="number" min="1" step="1" inputmode="numeric" value="@V(Model.General)" placeholder="Ej: 1500000" />
+
+        <h3 class="details-subtitle">Por categoría (opcional)</h3>
+        <div class="budget-grid">
+            @foreach (var (category, amount) in Model.PerCategory)
+            {
+                <div>
+                    <label for="b-@category.GetHashCode()">@category</label>
+                    <input id="b-@category.GetHashCode()" name="categories[@category]" type="number" min="1" step="1" inputmode="numeric" value="@V(amount)" />
+                </div>
+            }
+        </div>
+        <p class="muted small-text">Cuando llegues al 80% de un presupuesto verás un aviso en Finanzas y en el inicio.</p>
+        <button class="btn primary" type="submit">Guardar presupuestos</button>
+    </form>
+</section>
+
+<section class="card">
+    <h2>Mis categorías</h2>
+    <p class="muted">Además de las categorías predeterminadas, puedes crear las tuyas (por ejemplo: Mascotas, Gimnasio, Regalos).</p>
+
+    <form asp-action="AddCategory" method="post" class="filters">
+        <div class="filter-field grow-2">
+            <label for="name">Nombre</label>
+            <input id="name" name="name" maxlength="40" minlength="2" required />
+        </div>
+        <div class="filter-field">
+            <label for="kind">Tipo</label>
+            <select id="kind" name="kind">
+                <option value="expense">Gasto</option>
+                <option value="income">Ingreso</option>
+            </select>
+        </div>
+        <div class="filter-actions">
+            <button class="btn primary" type="submit">Crear categoría</button>
+        </div>
+    </form>
+
+    @foreach (var c in Model.CustomCategories)
+    {
+        <div class="list-item">
+            <div><strong>@c.Name</strong><small>@(c.Kind == "income" ? "Ingreso" : "Gasto")</small></div>
+            <form asp-action="DeleteCategory" asp-route-id="@c.Id" method="post" data-confirm="¿Eliminar la categoría «@c.Name»?">
+                <button class="danger-link" type="submit">Eliminar</button>
+            </form>
+        </div>
+    }
+    @if (!Model.CustomCategories.Any())
+    {
+        <p class="muted">Todavía no has creado categorías.</p>
+    }
+</section>

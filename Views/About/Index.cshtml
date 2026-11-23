@@ -1,0 +1,173 @@
+@{
+    ViewData["Title"] = "Acerca de nosotros";
+    var email = ViewData["ContactEmail"] as string;
+    var github = ViewData["GitHub"] as string;
+    var linkedin = ViewData["LinkedIn"] as string;
+
+    var icons = new Dictionary<string, string>
+    {
+        ["mision"] = "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M15.5 8.5l-2 5-5 2 2-5z\"/>",
+        ["vision"] = "<path d=\"M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/>",
+        ["calma"] = "<path d=\"M3 12c2.5-3 5.5-3 8 0s5.5 3 10 0\"/><path d=\"M3 17c2.5-3 5.5-3 8 0s5.5 3 10 0\"/><path d=\"M3 7c2.5-3 5.5-3 8 0s5.5 3 10 0\"/>",
+        ["claridad"] = "<circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4\"/>",
+        ["equilibrio"] = "<path d=\"M12 3v18M5 21h14\"/><path d=\"M5 7h14\"/><path d=\"M5 7l-3 6a3 3 0 0 0 6 0z\"/><path d=\"M19 7l-3 6a3 3 0 0 0 6 0z\"/>",
+        ["progreso"] = "<path d=\"M3 20l6-6 4 4 8-9\"/><path d=\"M15 9h6v6\"/>",
+        ["bienestar"] = "<path d=\"M12 21s-7-4.5-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.5-9 9-9 9z\"/>",
+        ["privacidad"] = "<rect x=\"5\" y=\"11\" width=\"14\" height=\"10\" rx=\"2\"/><path d=\"M8 11V8a4 4 0 0 1 8 0v3\"/>",
+        ["tareas"] = "<path d=\"M9 11l3 3 8-8\"/><path d=\"M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9\"/>",
+        ["calendario"] = "<rect x=\"3\" y=\"4\" width=\"18\" height=\"17\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18\"/>",
+        ["finanzas"] = "<rect x=\"2\" y=\"6\" width=\"20\" height=\"13\" rx=\"2\"/><circle cx=\"12\" cy=\"12.5\" r=\"2.5\"/><path d=\"M6 12.5h.01M18 12.5h.01\"/>",
+        ["metas"] = "<circle cx=\"12\" cy=\"12\" r=\"9\"/><circle cx=\"12\" cy=\"12\" r=\"5\"/><circle cx=\"12\" cy=\"12\" r=\"1\"/>",
+        ["avisos"] = "<path d=\"M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9\"/><path d=\"M10.3 21a1.9 1.9 0 0 0 3.4 0\"/>",
+        ["informes"] = "<path d=\"M4 20V10M10 20V4M16 20v-7M22 20H2\"/>",
+        ["musica"] = "<path d=\"M9 18V5l12-2v13\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><circle cx=\"18\" cy=\"16\" r=\"3\"/>",
+        ["estilo"] = "<path d=\"M12 22a10 10 0 1 1 10-10c0 2.8-2.2 4-4 4h-2a2 2 0 0 0-1 3.7A2 2 0 0 1 12 22z\"/><circle cx=\"7.5\" cy=\"10.5\" r=\"1\"/><circle cx=\"12\" cy=\"7.5\" r=\"1\"/><circle cx=\"16.5\" cy=\"10.5\" r=\"1\"/>",
+    };
+
+    var valores = new (string Icon, string Title, string Text)[]
+    {
+        ("calma", "Tranquilidad", "Cada problema tiene un camino. Lo que no se puede resolver hoy, se planea para mañana."),
+        ("claridad", "Claridad", "Saber qué sigue y hacia dónde vas, sin ruido ni pendientes escondidos."),
+        ("equilibrio", "Equilibrio", "Responsabilidades, dinero y bienestar en la misma balanza."),
+        ("progreso", "Progreso continuo", "Un paso a la vez: sin prisa, pero sin pausa."),
+        ("bienestar", "Bienestar compartido", "Crecer sin dejar atrás a la gente que te quiere y te apoya."),
+        ("privacidad", "Privacidad", "Tu información es solo tuya. Nadie más la ve."),
+    };
+
+    var funciones = new (string Icon, string Title)[]
+    {
+        ("tareas", "Tareas"), ("calendario", "Calendario"), ("finanzas", "Finanzas"), ("metas", "Metas"),
+        ("avisos", "Avisos"), ("informes", "Informes"), ("musica", "Música"), ("estilo", "Tu estilo"),
+    };
+}
+@functions {
+    private static Microsoft.AspNetCore.Html.IHtmlContent Icon(string paths) =>
+        new Microsoft.AspNetCore.Html.HtmlString(
+            "<svg class=\"about-icon\" aria-hidden=\"true\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\">" + paths + "</svg>");
+}
+
+<div class="about-page">
+    <div class="about-watermark" aria-hidden="true">
+        <partial name="_Logo" model="@("about-wm-logo")" />
+    </div>
+    <svg class="about-trails" aria-hidden="true" viewBox="0 0 1280 500" preserveAspectRatio="none">
+        <path d="M-20 380 C200 300 360 430 600 360 C820 300 980 230 1300 290" />
+        <path d="M-20 450 C220 380 400 480 640 420 C860 370 1020 320 1300 360" />
+    </svg>
+
+    <header class="about-hero about-rise">
+        <div class="about-hero-logo"><partial name="_Logo" model="@("")" /></div>
+        <span class="about-eyebrow">ACERCA DE NOSOTROS</span>
+        <h1>Tu vida en orden, <span>a tu ritmo</span>.</h1>
+        <p class="about-lead">CAMSTEP es tu espacio personal para organizar tus días, tu dinero y tus metas en un solo lugar sereno. Organiza tu vida. Avanza con calma.</p>
+    </header>
+
+    <section class="about-card about-prologue about-rise" aria-labelledby="t-prologo">
+        <div class="about-side">
+            <span class="about-eyebrow">PRÓLOGO</span>
+            <h2 id="t-prologo">Una vida en orden</h2>
+            <div class="about-bar"></div>
+        </div>
+        <div class="about-text">
+            <p>Una vida en orden no es una vida sin problemas. Es una vida en la que sabes que cada problema tiene un camino, que tus cuentas no te quitan el sueño, que tus metas tienen fecha y que siempre queda tiempo para lo que de verdad importa.</p>
+            <p>No se trata de controlarlo todo, sino de ver con claridad. De saber hacia dónde vas aunque el camino todavía no esté escrito, y de avanzar con calma porque confías en el paso que sigue. Es la tranquilidad de quien tiene sus asuntos en orden y por eso puede dejar pasar el estrés, las deudas y el ruido que no le pertenece.</p>
+            <p>Una vida en orden también se construye con otros: con la gente que te quiere, te apoya y camina a tu lado. Por eso el orden no es frío ni rígido; es cuidar tu bienestar y el de quienes te rodean mientras sigues creciendo.</p>
+            <p>CAMSTEP nació para acompañarte en ese camino. No promete una vida perfecta: te ofrece un lugar sereno donde tus días, tu dinero y tus sueños encuentran su sitio, para que cada paso, por pequeño que sea, te acerque a la vida que quieres.</p>
+            <p class="about-closing">Bienvenido a tu camino.</p>
+        </div>
+    </section>
+
+    <section class="about-two">
+        <article class="about-card about-rise" aria-labelledby="t-mision">
+            <div class="about-icon-box">@Icon(icons["mision"])</div>
+            <span class="about-eyebrow">MISIÓN</span>
+            <h2 id="t-mision">Lo que hacemos cada día</h2>
+            <p>Ayudar a las personas a organizar su vida diaria —sus tareas, su tiempo, su dinero y sus metas— desde un solo lugar sencillo y seguro, para que vivan con más tranquilidad, claridad y la certeza de que cada problema tiene una solución, avanzando paso a paso hacia sus sueños sin descuidar su bienestar ni el de las personas que quieren.</p>
+        </article>
+        <article class="about-card about-rise" aria-labelledby="t-vision">
+            <div class="about-icon-box">@Icon(icons["vision"])</div>
+            <span class="about-eyebrow">VISIÓN</span>
+            <h2 id="t-vision">Hacia dónde vamos</h2>
+            <p>Ser el espacio personal de confianza donde cualquier persona encuentre el equilibrio entre sus responsabilidades, su estabilidad económica y su bienestar; un lugar que le ayude a ver con claridad hacia dónde va, a disfrutar el proceso y a construir, día a día, una vida en orden: tranquila, con propósito y en progreso continuo.</p>
+        </article>
+    </section>
+
+    <section class="about-block" aria-labelledby="t-valores">
+        <div class="about-block-head">
+            <span class="about-eyebrow">VALORES</span>
+            <h2 id="t-valores">Lo que nos guía</h2>
+        </div>
+        <div class="about-three">
+            @foreach (var v in valores)
+            {
+                <article class="about-card about-value about-rise">
+                    <div class="about-icon-box">@Icon(icons[v.Icon])</div>
+                    <h3>@v.Title</h3>
+                    <p>@v.Text</p>
+                </article>
+            }
+        </div>
+    </section>
+
+    <section class="about-card about-name about-rise" aria-labelledby="t-nombre">
+        <div class="about-text">
+            <span class="about-eyebrow">EL NOMBRE Y EL LOGO</span>
+            <h2 id="t-nombre">¿Por qué CAMSTEP?</h2>
+            <p><b>CAMSTEP</b> une dos palabras: <b>CAM</b>, de <i>camino</i>, y <b>STEP</b>, que en inglés significa <i>paso</i>. Tu vida es un camino, y se recorre paso a paso: no siempre en línea recta, pero cuando está en orden sabes hacia dónde lleva.</p>
+            <p>Nuestro guía es un <b>mapache</b>: curioso, ingenioso y ordenado a su manera. Su antifaz es un sendero que sube, como el progreso continuo; el brote sobre su cabeza es la vida que crece; sus ojos serenos son la calma que buscamos, y sus formas limpias, la tecnología que te acompaña sin ocupar el centro.</p>
+        </div>
+        <div class="about-name-logo">
+            <div class="about-big-logo"><partial name="_Logo" model="@("")" /></div>
+            <div class="about-chips">
+                <span>Antifaz · sendero</span>
+                <span>Brote · vida</span>
+                <span>Mirada · calma</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="about-block" aria-labelledby="t-reune">
+        <div class="about-block-head">
+            <span class="about-eyebrow">TODO EN UN SOLO LUGAR</span>
+            <h2 id="t-reune">Lo que reúne CAMSTEP</h2>
+        </div>
+        <div class="about-four">
+            @foreach (var f in funciones)
+            {
+                <div class="about-card about-feature">@Icon(icons[f.Icon])<span>@f.Title</span></div>
+            }
+        </div>
+    </section>
+
+    <section class="about-card about-behind about-rise" aria-labelledby="t-detras">
+        <div class="about-text">
+            <span class="about-eyebrow">DETRÁS DE CAMSTEP</span>
+            <h2 id="t-detras">Un proyecto personal, hecho con calma</h2>
+            <p>CAMSTEP es un proyecto personal <b>diseñado y desarrollado por Harol Teran</b>, desarrollador de software en Bogotá, Colombia.</p>
+            <p>Nació de las ganas de tener un solo lugar para organizar la vida con calma: tareas, metas, finanzas y momentos, cada uno a su ritmo.</p>
+            @if (github != null || linkedin != null)
+            {
+                <div class="about-links">
+                    @if (github != null) { <a class="btn" href="@github" target="_blank" rel="noopener noreferrer">GitHub</a> }
+                    @if (linkedin != null) { <a class="btn" href="@linkedin" target="_blank" rel="noopener noreferrer">LinkedIn</a> }
+                </div>
+            }
+        </div>
+        <dl class="about-facts">
+            <dt>Creado por</dt><dd>Harol Teran</dd>
+            <dt>Desde</dt><dd>Bogotá, Colombia</dd>
+            <dt>Versión</dt><dd>1.0 · 2026</dd>
+            <dt>Hecho con</dt><dd>C# · ASP.NET Core · SQLite</dd>
+            @if (email != null)
+            {
+                <dt>Contacto</dt><dd><a href="mailto:@email">@email</a></dd>
+            }
+            <dt>Tus datos</dt><dd>Privados: solo tú los ves</dd>
+        </dl>
+    </section>
+
+    <footer class="about-foot">
+        <div class="about-foot-logo"><partial name="_Logo" model="@("")" /></div>
+        Gracias por caminar con nosotros.
+    </footer>
+</div>

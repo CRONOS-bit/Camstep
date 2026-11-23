@@ -1,0 +1,48 @@
+@model Expense
+@{
+    var isEdit = Model.Id > 0;
+    var categories = ViewBag.Categories as List<string> ?? Expense.Categories.ToList();
+    var returnUrl = ViewBag.ReturnUrl as string;
+}
+
+<form asp-action="@(isEdit ? "Edit" : "Create")" method="post">
+    <div asp-validation-summary="ModelOnly" class="error" role="alert"></div>
+
+    @if (isEdit)
+    {
+        <input asp-for="Id" type="hidden" />
+    }
+    <input type="hidden" name="returnUrl" value="@returnUrl" />
+
+    <label asp-for="Description">Descripción</label>
+    <input asp-for="Description" maxlength="150" required />
+    <span asp-validation-for="Description" class="field-error"></span>
+
+    <div class="form-row">
+        <div>
+            <label asp-for="Amount">Valor (pesos)</label>
+            <input asp-for="Amount" type="number" step="0.01" min="0.01" inputmode="decimal" required
+                   value="@(Model.Amount > 0 ? Model.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture) : "")" />
+            <span asp-validation-for="Amount" class="field-error"></span>
+        </div>
+        <div>
+            <label asp-for="Date">Fecha</label>
+            <input asp-for="Date" type="date" min="2000-01-01" max="2100-12-31" required />
+            <span asp-validation-for="Date" class="field-error"></span>
+        </div>
+    </div>
+
+    <label asp-for="Category">Categoría <a class="btn soft xsmall" asp-controller="Finance" asp-action="Budgets">＋ Nueva categoría</a></label>
+    <select asp-for="Category">
+        @foreach (var c in categories)
+        {
+            <option value="@c" selected="@(Model.Category == c)">@c</option>
+        }
+    </select>
+    <span asp-validation-for="Category" class="field-error"></span>
+
+    <div class="form-actions">
+        <button class="btn primary" type="submit">@(isEdit ? "Guardar cambios" : "Guardar")</button>
+        <a class="btn" href="@(!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl) ? returnUrl : Url.Action("Index", "Finance"))">Cancelar</a>
+    </div>
+</form>

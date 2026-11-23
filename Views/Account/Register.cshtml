@@ -1,0 +1,34 @@
+@model RegisterViewModel
+@{ ViewData["Title"] = "Crear cuenta"; ViewData["AuthPage"] = true; }
+
+<div class="auth-card">
+    <h1>Empieza tu camino</h1>
+    <p class="muted">Un solo lugar para tus tareas, tu dinero y tus metas.</p>
+
+    <form asp-action="Register" method="post">
+        <div asp-validation-summary="ModelOnly" class="error" role="alert"></div>
+
+        <label asp-for="Name">Nombre</label>
+        <input asp-for="Name" autocomplete="name" required />
+        <span asp-validation-for="Name" class="field-error"></span>
+
+        <label asp-for="Email">Correo</label>
+        <input asp-for="Email" type="email" autocomplete="email" required />
+        <span asp-validation-for="Email" class="field-error"></span>
+
+        <label asp-for="Password">Contraseña</label>
+        <input asp-for="Password" type="password" autocomplete="new-password" minlength="6" required />
+        <span asp-validation-for="Password" class="field-error"></span>
+
+        <label asp-for="ConfirmPassword">Confirmar contraseña</label>
+        <input asp-for="ConfirmPassword" type="password" autocomplete="new-password" required />
+        <span asp-validation-for="ConfirmPassword" class="field-error"></span>
+
+        <button class="btn primary full" type="submit">Crear mi cuenta</button>
+    </form>
+
+    <div class="auth-alt">
+        <p class="muted">¿Ya tienes cuenta?</p>
+        <a class="btn full outline" asp-action="Login">Iniciar sesión</a>
+    </div>
+</div>
