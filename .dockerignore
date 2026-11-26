@@ -1,0 +1,13 @@
+bin/
+obj/
+.vs/
+.git/
+*.user
+*.db
+*.db-wal
+*.db-shm
+App_Data/
+backups/
+docs/
+Dockerfile
+.dockerignore

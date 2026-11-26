@@ -6,11 +6,81 @@ La app ya está preparada para producción:
 - Cookies seguras y cabeceras de seguridad.
 - Página de error genérica.
 - Las claves de las sesiones se guardan en disco.
-- La base de datos se busca junto a la app.
+- Con la variable `DataRoot`, la base, los archivos subidos, las claves y los respaldos se guardan juntos en una carpeta aparte (por ejemplo un volumen del servidor).
+- Trae un `Dockerfile` listo para servidores que usan contenedores, como Railway.
 
-Lo que falta es elegir **dónde** publicarla. Aquí tienes tres caminos, del más fácil al más completo.
+Lo que falta es elegir **dónde** publicarla. Para tenerla abierta 24/7 para cualquier persona, la recomendada es **Railway** (abajo). Las otras opciones sirven para probar o para hostings gratuitos con limitaciones.
 
 > Antes de cualquier opción, **haz una copia** de `camstep.db` (y de los archivos `-wal` y `-shm`) y de la carpeta `App_Data`.
+
+---
+
+## Recomendada: Railway (24/7, desde GitHub)
+
+Railway toma tu repositorio de GitHub, construye la app con el `Dockerfile` y la publica con HTTPS. Cada vez que haces `git push`, se vuelve a publicar sola.
+
+**Costo** (revísalo en https://railway.com/pricing, porque puede cambiar):
+
+- Prueba gratis de 30 días con 5 USD de crédito, sin tarjeta.
+- Después, el plan gratis da 1 USD al mes y las apps **se duermen** cuando nadie las usa. El volumen es de solo 0.5 GB.
+- Para que esté despierta 24/7, el plan **Hobby** cuesta 5 USD al mes (incluye 5 USD de uso) y el volumen llega hasta 5 GB.
+
+### Paso 1: Sube los cambios a GitHub
+
+```bash
+git add .
+git commit -m "Preparar CAMSTEP para Railway"
+git push
+```
+
+Revisa en GitHub que se vean `Dockerfile` y `.dockerignore` en la raíz, junto a `Camstep.csproj`.
+
+### Paso 2: Crea el proyecto
+
+1. Entra a https://railway.com y pulsa **Login** → **Login with GitHub**.
+2. **New Project** → **Deploy from GitHub repo** → elige tu repositorio de CAMSTEP. Si no aparece, pulsa **Configure GitHub App** y dale acceso a ese repositorio.
+3. Railway detecta el `Dockerfile` solo y empieza a construir. La primera vez tarda unos minutos.
+
+### Paso 3: Agrega el volumen (¡no te lo saltes!)
+
+Sin volumen, **cada nueva publicación borra todas las cuentas y los datos**.
+
+1. En el lienzo del proyecto, clic derecho sobre el servicio (o **Ctrl+K**) → **Add Volume**.
+2. Elige tu servicio y en **Mount path** escribe exactamente: `/data`
+3. Railway reinicia la app. Desde ahí, `camstep.db`, la música, los fondos, las claves de sesión y los respaldos viven en `/data`.
+
+### Paso 4: Variables
+
+En el servicio → pestaña **Variables** → **New Variable**:
+
+| Variable | Valor | ¿Obligatoria? |
+| --- | --- | --- |
+| `About__ContactEmail` | tu correo de contacto | Muy recomendada: aparece en "Acerca de" y en la política de privacidad |
+| `About__GitHub` | enlace a tu GitHub | Opcional |
+| `About__LinkedIn` | enlace a tu LinkedIn | Opcional |
+| `Storage__MusicQuotaMB` | `40` en el plan gratis, `150` en Hobby | Recomendada: espacio de música por usuario |
+| `Smtp__Host`, `Smtp__Port`, `Smtp__EnableSsl`, `Smtp__User`, `Smtp__Password`, `Smtp__From` | ver "Configurar el correo" | Para "¿Olvidaste tu contraseña?" |
+| `Security__MaxRegistrationsPerHour` | por defecto `5` | Opcional: cuentas nuevas por hora desde una misma conexión |
+
+`DataRoot=/data` y el puerto ya vienen en el `Dockerfile`; no los pongas.
+
+### Paso 5: Genera la dirección
+
+1. En el servicio → **Settings** → **Networking** → **Generate Domain**.
+2. Te da algo como `camstep-production.up.railway.app`, ya con HTTPS.
+3. Si algún día compras un dominio propio, ahí mismo está **Custom Domain**.
+
+### Paso 6: Prueba
+
+Recorre la lista de verificación del final de esta guía, desde el celular con datos móviles.
+
+### Bueno saberlo
+
+- **La app arranca vacía en el servidor.** Tu `camstep.db` de tu PC no se sube (está en `.gitignore` y `.dockerignore`), así que nadie verá tus datos de prueba.
+- **Cada publicación cierra las sesiones abiertas.** Las sesiones viven en memoria; después de un `git push` todos vuelven a iniciar sesión. Los datos no se pierden.
+- **Respaldos:** antes de cualquier cambio de estructura, la app guarda una copia en `/data/backups`. Para bajar una copia de la base puedes entrar con la CLI de Railway (`railway ssh`).
+- **Registros (logs):** en el servicio → **Deployments** → **View logs**.
+- **Gasto:** en **Workspace → Usage** ves cuánto vas consumiendo. Puedes poner un límite de gasto para no llevarte sorpresas.
 
 ---
 
@@ -125,4 +195,6 @@ Abre `http://localhost:5080`: debe redirigirte a `https://localhost:5443`.
 - [ ] Reinicias el sitio desde el panel y la sesión y los datos siguen ahí.
 - [ ] "¿Olvidaste tu contraseña?" envía el correo (si lo configuraste).
 - [ ] La app abre bien desde el celular, con datos móviles.
+- [ ] La página de **Privacidad** muestra tu correo de contacto.
+- [ ] Publicas otra vez (un `git push`) y tus datos siguen ahí.
 - [ ] Descargaste una copia de `camstep.db`.

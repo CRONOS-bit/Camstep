@@ -21,4 +21,7 @@ public class RegisterViewModel
     [Required(ErrorMessage = "Confirma la contraseña.")]
     [Compare("Password", ErrorMessage = "Las contraseñas no coinciden.")]
     public string ConfirmPassword { get; set; } = "";
+
+    [Range(typeof(bool), "true", "true", ErrorMessage = "Para crear tu cuenta debes aceptar la política de privacidad y los términos de uso.")]
+    public bool AcceptPrivacy { get; set; }
 }

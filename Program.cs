@@ -13,6 +13,8 @@ CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
 var contentRoot = builder.Environment.ContentRootPath;
+var paths = AppPaths.From(builder.Configuration, contentRoot);
+builder.Services.AddSingleton(paths);
 
 builder.Services.AddControllersWithViews(options =>
 {
@@ -41,12 +43,12 @@ builder.Services.AddAntiforgery(options =>
 
 builder.Services.AddDataProtection()
     .SetApplicationName("Camstep")
-    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(contentRoot, "App_Data", "keys")));
+    .PersistKeysToFileSystem(new DirectoryInfo(paths.Keys));
 
 var connection = new SqliteConnectionStringBuilder(
     builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=camstep.db");
 if (!Path.IsPathRooted(connection.DataSource))
-    connection.DataSource = Path.Combine(contentRoot, connection.DataSource);
+    connection.DataSource = Path.Combine(paths.DataRoot, connection.DataSource);
 Directory.CreateDirectory(Path.GetDirectoryName(connection.DataSource)!);
 LegacyDatabase.MoveToNewName(connection.DataSource);
 
@@ -82,7 +84,7 @@ using (var scope = app.Services.CreateScope())
 
     db.Database.EnsureCreated();
 
-    SchemaUpdater.Apply(db, app.Environment.ContentRootPath, logger);
+    SchemaUpdater.Apply(db, paths.Backups, logger);
 }
 
 app.UseForwardedHeaders();

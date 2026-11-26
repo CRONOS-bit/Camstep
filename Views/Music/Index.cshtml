@@ -15,6 +15,10 @@
     <section class="card music-card">
         <h2>Añadir una canción o sonido</h2>
         <p class="muted">Sube archivos que tengas derecho a usar. Admite MP3, WAV, OGG, M4A, AAC y FLAC (máximo 50 MB por archivo).</p>
+        <div class="storage-meter" role="group" aria-label="Espacio usado">
+            <div class="progress"><span style="width:@Model.UsedPercent%"></span></div>
+            <small class="muted">Usas @Size(Model.UsedBytes) de @(Model.QuotaBytes / 1024 / 1024) MB</small>
+        </div>
         <form asp-action="Upload" method="post" enctype="multipart/form-data">
             <label for="audio">Archivo de audio</label>
             <input id="audio" name="audio" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac" required />

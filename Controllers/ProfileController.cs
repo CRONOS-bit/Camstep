@@ -122,6 +122,12 @@ public class ProfileController : AppController
             await _db.Notifications.Where(x => x.UserId == id).ExecuteDeleteAsync();
             await _db.PasswordResetTokens.Where(x => x.UserId == id).ExecuteDeleteAsync();
             await _db.UserPreferences.Where(x => x.UserId == id).ExecuteDeleteAsync();
+            await _db.SoundCloudLinks.Where(x => x.UserId == id).ExecuteDeleteAsync();
+            await _db.FocusSessions.Where(x => x.UserId == id).ExecuteDeleteAsync();
+            await _db.HabitLogs.Where(x => x.UserId == id).ExecuteDeleteAsync();
+            await _db.Habits.Where(x => x.UserId == id).ExecuteDeleteAsync();
+            await _db.MoodEntries.Where(x => x.UserId == id).ExecuteDeleteAsync();
+            await _db.WeeklyReviews.Where(x => x.UserId == id).ExecuteDeleteAsync();
             await _db.Users.Where(x => x.Id == id).ExecuteDeleteAsync();
             await tx.CommitAsync();
         }

@@ -67,6 +67,10 @@ public static class SchemaUpdater
             CREATE INDEX IF NOT EXISTS IX_Songs_UserId ON Songs (UserId);
             """),
 
+        new("Columna Users.PrivacyAcceptedAt",
+            c => TableExists(c, "Users") && !ColumnExists(c, "Users", "PrivacyAcceptedAt"),
+            "ALTER TABLE Users ADD COLUMN PrivacyAcceptedAt TEXT NULL;"),
+
         new("Columna Tasks.CompletedAt",
             c => !ColumnExists(c, "Tasks", "CompletedAt"),
             "ALTER TABLE Tasks ADD COLUMN CompletedAt TEXT NULL;"),
@@ -330,7 +334,7 @@ public static class SchemaUpdater
             Optional: true),
     };
 
-    public static void Apply(AppDbContext db, string contentRoot, ILogger logger)
+    public static void Apply(AppDbContext db, string backupFolder, ILogger logger)
     {
         var connection = db.Database.GetDbConnection();
         var wasOpen = connection.State == System.Data.ConnectionState.Open;
@@ -341,7 +345,7 @@ public static class SchemaUpdater
             var pending = Steps.Where(s => s.IsNeeded(connection)).ToList();
             if (pending.Count == 0) return;
 
-            Backup(connection, contentRoot, logger);
+            Backup(connection, backupFolder, logger);
 
             foreach (var step in pending)
             {
@@ -364,11 +368,10 @@ public static class SchemaUpdater
         }
     }
 
-    private static void Backup(DbConnection connection, string contentRoot, ILogger logger)
+    private static void Backup(DbConnection connection, string folder, ILogger logger)
     {
         if (!TableExists(connection, "Users")) return;
 
-        var folder = Path.Combine(contentRoot, "backups");
         Directory.CreateDirectory(folder);
         var file = Path.Combine(folder, $"camstep-{DateTime.Now:yyyyMMdd-HHmmss}.db");
 

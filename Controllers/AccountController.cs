@@ -96,6 +96,16 @@ public class AccountController : Controller
     {
         if (!ModelState.IsValid) return View(model);
 
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "desconocida";
+        var registerKey = "register:" + ip;
+        var recent = _cache.TryGetValue(registerKey, out int count) ? count : 0;
+        var maxPerHour = HttpContext.RequestServices.GetRequiredService<IConfiguration>().GetValue("Security:MaxRegistrationsPerHour", 5);
+        if (recent >= maxPerHour)
+        {
+            ModelState.AddModelError(string.Empty, "Se crearon demasiadas cuentas desde esta conexión. Intenta de nuevo en una hora.");
+            return View(model);
+        }
+
         var email = model.Email.Trim().ToLowerInvariant();
 
         if (await _db.Users.AnyAsync(x => x.Email == email))
@@ -107,7 +117,8 @@ public class AccountController : Controller
         var user = new User
         {
             Name = model.Name.Trim(),
-            Email = email
+            Email = email,
+            PrivacyAcceptedAt = DateTime.UtcNow
         };
 
         user.PasswordHash = _hasher.HashPassword(user, model.Password);
@@ -124,6 +135,7 @@ public class AccountController : Controller
             return View(model);
         }
 
+        _cache.Set(registerKey, recent + 1, TimeSpan.FromHours(1));
         await StartSession(user);
 
         return RedirectToAction("Index", "Home");

@@ -125,4 +125,7 @@ public class MusicViewModel
     public List<Song> Songs { get; set; } = new();
     public List<PlaylistView> Playlists { get; set; } = new();
     public List<SoundCloudLink> SoundCloud { get; set; } = new();
+    public long UsedBytes { get; set; }
+    public long QuotaBytes { get; set; }
+    public int UsedPercent => QuotaBytes > 0 ? (int)Math.Min(100, UsedBytes * 100 / QuotaBytes) : 0;
 }

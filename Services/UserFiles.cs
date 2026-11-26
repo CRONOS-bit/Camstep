@@ -4,9 +4,9 @@ public class UserFiles
 {
     private readonly string _root;
 
-    public UserFiles(IWebHostEnvironment env)
+    public UserFiles(AppPaths paths)
     {
-        _root = Path.Combine(env.ContentRootPath, "App_Data", "uploads");
+        _root = paths.Uploads;
     }
 
     public string Folder(int userId, string kind)

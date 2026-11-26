@@ -24,6 +24,12 @@
         <input asp-for="ConfirmPassword" type="password" autocomplete="new-password" required />
         <span asp-validation-for="ConfirmPassword" class="field-error"></span>
 
+        <label class="inline privacy-accept">
+            <input asp-for="AcceptPrivacy" type="checkbox" required />
+            <span>Acepto la <a asp-controller="Privacy" asp-action="Index" target="_blank" rel="noopener">política de privacidad y los términos de uso</a> de CAMSTEP.</span>
+        </label>
+        <span asp-validation-for="AcceptPrivacy" class="field-error"></span>
+
         <button class="btn primary full" type="submit">Crear mi cuenta</button>
     </form>
 

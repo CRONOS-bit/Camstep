@@ -4662,3 +4662,54 @@ body.auth-page .auth-card .btn.soft {
         flex: 1 1 160px;
         min-width: 0;
     }
+
+.storage-meter {
+    display: grid;
+    gap: 6px;
+    margin: 4px 0 14px;
+}
+
+.legal-page {
+    max-width: 860px;
+    margin: 0 auto;
+    display: grid;
+    gap: 16px;
+}
+
+    .legal-page .card {
+        margin: 0;
+    }
+
+    .legal-page h2 {
+        margin-top: 0;
+        font-size: 20px;
+    }
+
+    .legal-page p,
+    .legal-page li {
+        line-height: 1.6;
+    }
+
+    .legal-page ul {
+        display: grid;
+        gap: 6px;
+        padding-left: 20px;
+    }
+
+.legal-summary {
+    border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+    background: color-mix(in srgb, var(--primary) 7%, var(--surface));
+}
+
+.privacy-accept {
+    align-items: flex-start;
+    gap: 8px;
+    margin: 12px 0 4px;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+    .privacy-accept input {
+        margin-top: 3px;
+        flex: none;
+    }

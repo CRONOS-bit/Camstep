@@ -71,7 +71,7 @@ public class PathViewModel
     public int DaysWalked => Footprints.Select(f => f.When.Date).Distinct().Count();
     public int MaxPerDay => 10;
 
-    public const int Width = 1000, Height = 260;
+    public const int Width = 1000, Height = 300;
     public string PathD { get; private set; } = "";
     public List<(double X, double Y, double Angle, bool Left, Footprint Print)> Prints { get; } = new();
     public List<(double X, double Y, string Label, int Count, bool IsToday, bool IsFuture)> DayMarks { get; } = new();

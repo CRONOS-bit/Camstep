@@ -15,11 +15,13 @@ public class MusicController : AppController
 
     private readonly AppDbContext _db;
     private readonly UserFiles _files;
+    private readonly long _quotaBytes;
 
-    public MusicController(AppDbContext db, UserFiles files)
+    public MusicController(AppDbContext db, UserFiles files, IConfiguration config)
     {
         _db = db;
         _files = files;
+        _quotaBytes = Math.Max(1, config.GetValue("Storage:MusicQuotaMB", 300)) * 1024L * 1024L;
     }
 
     public async Task<IActionResult> Index()
@@ -35,6 +37,8 @@ public class MusicController : AppController
 
         return View(new MusicViewModel
         {
+            UsedBytes = songs.Sum(s => s.SizeBytes),
+            QuotaBytes = _quotaBytes,
             SoundCloud = soundCloud,
             Songs = songs.OrderBy(s => s.Title, StringComparer.CurrentCultureIgnoreCase).ToList(),
             Playlists = playlists.OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase)
@@ -279,6 +283,14 @@ public class MusicController : AppController
         }
 
         var userId = CurrentUserId;
+        var used = (await _db.Songs.Where(s => s.UserId == userId).Select(s => s.SizeBytes).ToListAsync()).Sum();
+        if (used + audio.Length > _quotaBytes)
+        {
+            var freeMb = Math.Max(0, (_quotaBytes - used) / 1024d / 1024d);
+            TempData["Error"] = $"Tu biblioteca tiene un límite de {_quotaBytes / 1024 / 1024} MB y te quedan {freeMb:0.0} MB. Quita alguna canción para subir esta, o usa SoundCloud, que no ocupa espacio.";
+            return RedirectToAction(nameof(Index));
+        }
+
         var storedName = $"{Guid.NewGuid():N}{extension}";
         var path = Path.Combine(_files.Folder(userId, "music"), storedName);
 
