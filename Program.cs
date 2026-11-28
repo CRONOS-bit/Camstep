@@ -129,6 +129,28 @@ app.UseRouting();
 
 app.UseSession();
 
+app.MapGet("/.well-known/assetlinks.json", (IConfiguration config) =>
+{
+    var package = config["Android:PackageName"]?.Trim();
+    var fingerprints = (config["Android:Sha256Fingerprints"] ?? "")
+        .Split(new[] { ',', ';', ' ', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Select(f => f.ToUpperInvariant())
+        .Distinct()
+        .ToArray();
+
+    if (string.IsNullOrEmpty(package) || fingerprints.Length == 0)
+        return Results.NotFound();
+
+    return Results.Json(new[]
+    {
+        new
+        {
+            relation = new[] { "delegate_permission/common.handle_all_urls" },
+            target = new { @namespace = "android_app", package_name = package, sha256_cert_fingerprints = fingerprints }
+        }
+    });
+});
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

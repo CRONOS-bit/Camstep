@@ -137,6 +137,25 @@ El plan F1 de Microsoft es gratuito. Tiene recursos limitados, no permite domini
 
 ---
 
+## Play Store (app Android con PWABuilder)
+
+La app de Android es tu misma web dentro de una "Trusted Web Activity" (TWA). Primero la web tiene que estar publicada y funcionando.
+
+1. **Cuenta:** crea tu cuenta en https://play.google.com/console. Cuesta 25 USD una sola vez y Google verifica tu identidad (unos días). Si la cuenta es personal y nueva, antes de publicar debes hacer una **prueba cerrada con al menos 12 testers durante 14 días seguidos**.
+2. **Paquete:** entra a https://www.pwabuilder.com, pega el link de tu app, dale **Package For Stores** → **Android** → **Generate Package**. Usa un Package ID fijo, por ejemplo `app.camstep.twa`, y deja que genere una llave de firma nueva.
+3. **Guarda el zip que descargas**, sobre todo el archivo `.keystore` y sus contraseñas (`signing-key-info.txt`). Sin eso no podrás publicar actualizaciones.
+4. **Vincula la app con tu web** desde Railway, sin tocar archivos. En **Variables** agrega:
+   - `Android__PackageName` = el Package ID (por ejemplo `app.camstep.twa`)
+   - `Android__Sha256Fingerprints` = la huella SHA-256 del `assetlinks.json` que trae el zip de PWABuilder.
+   Comprueba que `https://TU-LINK/.well-known/assetlinks.json` muestre esos datos.
+5. **Sube el `.aab`** en Play Console (empieza por **Prueba cerrada**). Cuando Google firme la app, ve a **Prueba y lanzamiento → Configuración → Integridad de la app → Firma de apps**, copia la **huella SHA-256 de la clave de firma de apps** y agrégala a `Android__Sha256Fingerprints`, separada por coma. Sin esto, la app abre con barra de navegador.
+6. **Ficha de la tienda:** ícono 512×512, gráfico de funciones 1024×500, al menos 2 capturas de celular, descripción, categoría Productividad.
+   - Política de privacidad: `https://TU-LINK/Privacy`
+   - Eliminación de cuenta: `https://TU-LINK/Privacy#borrar-cuenta`
+   - Completa el formulario de **Seguridad de los datos** (nombre, correo, datos que la persona escribe; nada se vende ni se comparte).
+
+---
+
 ## Configurar el correo (para "¿Olvidaste tu contraseña?")
 
 Sin correo configurado, la recuperación de contraseña **no envía nada**. En modo desarrollo, el enlace aparece en pantalla para que puedas probar.
